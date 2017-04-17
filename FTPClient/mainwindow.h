@@ -2,6 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QListView>
+#include <QStandardItem>
+#include <QStandardItemModel>
+#include <QModelIndex>
 
 namespace Ui {
 class MainWindow;
@@ -17,6 +21,13 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    QListView *locallist;
+    QListView *serverlist;
+    QStandardItemModel *localstandardItemModel;
+    QStandardItemModel *serverstandardItemModel;
+private slots:
+    void localitemClicked(QModelIndex index);
+    void serveritemClicked(QModelIndex index);
 };
 
 #endif // MAINWINDOW_H
