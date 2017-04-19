@@ -34,6 +34,8 @@ private:
     QStandardItemModel *serverstandardItemModel;
 private slots:
     int loginserver();
+    int setactvmode();
+    int setpassmode();
     int logoutserver();
     void localitemClicked(QModelIndex index);
     void serveritemClicked(QModelIndex index);

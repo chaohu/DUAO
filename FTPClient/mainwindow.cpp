@@ -19,6 +19,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    ui->menu->addAction("主动",this,SLOT(setactvmode()));
+    ui->menu->addAction("被动",this,SLOT(setpassmode()));
 
 
     //主题布局
@@ -102,6 +104,14 @@ int MainWindow::loginserver() {
     qDebug(host_e->text().toStdString().data());
     qDebug(username_e->text().toStdString().data());
     return ftpmanager->loginserver(host_e->text().toStdString(),username_e->text().toStdString(),pwd_e->text().toStdString(),port_e->text().toInt());
+}
+
+int MainWindow::setactvmode() {
+    return ftpmanager->setactvmode();
+}
+
+int MainWindow::setpassmode() {
+    return ftpmanager->setpassmode();
 }
 
 int MainWindow::logoutserver() {

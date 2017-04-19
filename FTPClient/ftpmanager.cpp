@@ -27,25 +27,41 @@ int FTPManager::loginserver(const std::string host,const std::string username,co
     addrSrv.sin_family = AF_INET;
     addrSrv.sin_port = htons(port);
 
+
     //连接到服务器端
     connect(sockClient,(SOCKADDR*)&addrSrv,sizeof(SOCKADDR));
-    char recvBuf[50];
     recv(sockClient,recvBuf,50,0);
     qDebug(recvBuf);
 
     //登陆到服务器
-    char sendBuf[20];
     sprintf(sendBuf,"USER %s\r\n",username.data());
-    qDebug(sendBuf);
     send(sockClient,sendBuf,strlen(sendBuf),0);
     recv(sockClient,recvBuf,50,0);
     qDebug(recvBuf);
     sprintf(sendBuf,"PASS %s\r\n",password.data());
-    qDebug(sendBuf);
     send(sockClient,sendBuf,strlen(sendBuf),0);
     recv(sockClient,recvBuf,50,0);
     qDebug(recvBuf);
 
+    //获取根目录列表
+//    sprintf(sendBuf,"LIST \r\n");
+//    send(sockClient,sendBuf,strlen(sendBuf),0);
+//    recv(sockClient,recvBuf,50,0);
+//    qDebug(recvBuf);
+
+
+    return 1;
+}
+
+int FTPManager::setactvmode() {
+    return 1;
+}
+
+int FTPManager::setpassmode() {
+    sprintf(sendBuf,"PASV\r\n");
+    send(sockClient,sendBuf,strlen(sendBuf),0);
+    recv(sockClient,recvBuf,50,0);
+    qDebug(recvBuf);
     return 1;
 }
 
