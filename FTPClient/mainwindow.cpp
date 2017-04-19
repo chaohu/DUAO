@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "ftpmanager.h"
+#include <string>
+using namespace std;
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -25,24 +27,24 @@ MainWindow::MainWindow(QWidget *parent) :
     //顶部布局
     QHBoxLayout *toplayout = new QHBoxLayout();
     QLabel *host_l = new QLabel("Host:");
-    QLineEdit *host_e = new QLineEdit();
+    host_e = new QLineEdit();
     QLabel *username_l = new QLabel("Username:");
-    QLineEdit *username_e = new QLineEdit();
-    QLabel *psw_l = new QLabel("Password:");
-    QLineEdit *psw_e = new QLineEdit();
+    username_e = new QLineEdit();
+    QLabel *pwd_l = new QLabel("Password:");
+    pwd_e = new QLineEdit();
     QLabel *port_l = new QLabel("Port:");
-    QLineEdit *port_e = new QLineEdit();
+    port_e = new QLineEdit();
     port_e->setValidator(new QIntValidator(0,10000,this));
     QPushButton *quickconn = new QPushButton("Quickconnect");
-    connect(quickconn,&QPushButton::clicked,this,&MainWindow::loginserver);
+    connect(quickconn,SIGNAL(clicked()),this,SLOT(loginserver()));
     QPushButton *disconn = new QPushButton("Disconnect");
-    connect(disconn,&QPushButton::clicked,this,&MainWindow::logoutserver);
+    connect(disconn,SIGNAL(clicked()),this,SLOT(logoutserver()));
     toplayout->addWidget(host_l);
     toplayout->addWidget(host_e);
     toplayout->addWidget(username_l);
     toplayout->addWidget(username_e);
-    toplayout->addWidget(psw_l);
-    toplayout->addWidget(psw_e);
+    toplayout->addWidget(pwd_l);
+    toplayout->addWidget(pwd_e);
     toplayout->addWidget(port_l);
     toplayout->addWidget(port_e);
     toplayout->addWidget(quickconn);
@@ -95,8 +97,11 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-int MainWindow::loginserver(const QString host, const QString username, const QString password, const QString port) {
-    return ftpmanager->loginserver(host.toStdString(),username.toStdString(),password.toStdString(),port.toInt());
+int MainWindow::loginserver() {
+    qDebug("hehe");
+    qDebug(host_e->text().toStdString().data());
+    qDebug(username_e->text().toStdString().data());
+    return ftpmanager->loginserver(host_e->text().toStdString(),username_e->text().toStdString(),pwd_e->text().toStdString(),port_e->text().toInt());
 }
 
 int MainWindow::logoutserver() {

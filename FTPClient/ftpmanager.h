@@ -1,11 +1,14 @@
 #ifndef FTPMANAGER_H
 #define FTPMANAGER_H
-
+#include <winsock2.h>
 #include <string>
 using namespace std;
 
 class FTPManager
 {
+private:
+    SOCKET sockClient;
+
 public:
     FTPManager();
 

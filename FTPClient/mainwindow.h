@@ -2,6 +2,9 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+
+#include <QLineEdit>
+
 #include <QListView>
 #include <QStandardItem>
 #include <QStandardItemModel>
@@ -21,12 +24,16 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    QLineEdit *host_e;
+    QLineEdit *username_e;
+    QLineEdit *pwd_e;
+    QLineEdit *port_e;
     QListView *locallist;
     QListView *serverlist;
     QStandardItemModel *localstandardItemModel;
     QStandardItemModel *serverstandardItemModel;
 private slots:
-    int loginserver(const QString host,const QString username,const QString password,const QString port);
+    int loginserver();
     int logoutserver();
     void localitemClicked(QModelIndex index);
     void serveritemClicked(QModelIndex index);

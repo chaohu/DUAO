@@ -1,5 +1,4 @@
 #include "ftpmanager.h"
-#include <winsock2.h>
 #include <QDebug>
 
 FTPManager::FTPManager() {
@@ -22,7 +21,7 @@ int FTPManager::loginserver(const std::string host,const std::string username,co
     }
 
     //初始化socket
-    SOCKET sockClient = socket(AF_INET,SOCK_STREAM,0);
+    sockClient = socket(AF_INET,SOCK_STREAM,0);
     SOCKADDR_IN addrSrv;
     addrSrv.sin_addr.S_un.S_addr = inet_addr(host.data());
     addrSrv.sin_family = AF_INET;
@@ -32,12 +31,26 @@ int FTPManager::loginserver(const std::string host,const std::string username,co
     connect(sockClient,(SOCKADDR*)&addrSrv,sizeof(SOCKADDR));
     char recvBuf[50];
     recv(sockClient,recvBuf,50,0);
+    qDebug(recvBuf);
 
-    closesocket(sockClient);
-    WSACleanup();
+    //登陆到服务器
+    char sendBuf[20];
+    sprintf(sendBuf,"USER %s\r\n",username.data());
+    qDebug(sendBuf);
+    send(sockClient,sendBuf,strlen(sendBuf),0);
+    recv(sockClient,recvBuf,50,0);
+    qDebug(recvBuf);
+    sprintf(sendBuf,"PASS %s\r\n",password.data());
+    qDebug(sendBuf);
+    send(sockClient,sendBuf,strlen(sendBuf),0);
+    recv(sockClient,recvBuf,50,0);
+    qDebug(recvBuf);
+
     return 1;
 }
 
 int FTPManager::logoutserver(){
+    closesocket(sockClient);
+    WSACleanup();
     return 1;
 }
