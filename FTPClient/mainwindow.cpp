@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "ftpmanager.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -9,12 +10,16 @@
 
 #include <QDebug>
 
+FTPManager *ftpmanager = new FTPManager();
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
+
+    //主题布局
     QVBoxLayout *mainlayout = new QVBoxLayout(this);
 
     //顶部布局
@@ -27,7 +32,11 @@ MainWindow::MainWindow(QWidget *parent) :
     QLineEdit *psw_e = new QLineEdit();
     QLabel *port_l = new QLabel("Port:");
     QLineEdit *port_e = new QLineEdit();
+    port_e->setValidator(new QIntValidator(0,10000,this));
     QPushButton *quickconn = new QPushButton("Quickconnect");
+    connect(quickconn,&QPushButton::clicked,this,&MainWindow::loginserver);
+    QPushButton *disconn = new QPushButton("Disconnect");
+    connect(disconn,&QPushButton::clicked,this,&MainWindow::logoutserver);
     toplayout->addWidget(host_l);
     toplayout->addWidget(host_e);
     toplayout->addWidget(username_l);
@@ -37,6 +46,7 @@ MainWindow::MainWindow(QWidget *parent) :
     toplayout->addWidget(port_l);
     toplayout->addWidget(port_e);
     toplayout->addWidget(quickconn);
+    toplayout->addWidget(disconn);
     toplayout->addStretch();
 
     //底部左侧布局
@@ -83,6 +93,14 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+int MainWindow::loginserver(const QString host, const QString username, const QString password, const QString port) {
+    return ftpmanager->loginserver(host.toStdString(),username.toStdString(),password.toStdString(),port.toInt());
+}
+
+int MainWindow::logoutserver() {
+    return ftpmanager->logoutserver();
 }
 
 void MainWindow::localitemClicked(QModelIndex index) {

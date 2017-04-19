@@ -26,6 +26,8 @@ private:
     QStandardItemModel *localstandardItemModel;
     QStandardItemModel *serverstandardItemModel;
 private slots:
+    int loginserver(const QString host,const QString username,const QString password,const QString port);
+    int logoutserver();
     void localitemClicked(QModelIndex index);
     void serveritemClicked(QModelIndex index);
 };
