@@ -100,18 +100,39 @@ MainWindow::~MainWindow()
 }
 
 int MainWindow::loginserver() {
-    qDebug("hehe");
-    qDebug(host_e->text().toStdString().data());
-    qDebug(username_e->text().toStdString().data());
-    return ftpmanager->loginserver(host_e->text().toStdString(),username_e->text().toStdString(),pwd_e->text().toStdString(),port_e->text().toInt());
+    std::string host = host_e->text().toStdString();
+    std::string	username = username_e->text().toStdString();
+    std::string password = pwd_e->text().toStdString();
+    QString port = port_e->text();
+    if(host.empty() || username.empty() || password.empty() || port.isEmpty()) {
+        qDebug("host/username/password/port不能为空");
+        return 0;
+    }
+    else {
+        return ftpmanager->loginserver(host,username,password,port.toInt());
+    }
 }
 
 int MainWindow::setactvmode() {
-    return ftpmanager->setactvmode();
+    if(ftpmanager->setactvmode()) {
+        qDebug("成功切换至主动模式");
+        return 1;
+    }
+    else {
+        qDebug("切换主动模式失败");
+        return 0;
+    }
 }
 
 int MainWindow::setpassmode() {
-    return ftpmanager->setpassmode();
+    if(ftpmanager->setpassmode()) {
+        qDebug("成功切换至被动模式");
+        return 1;
+    }
+    else {
+        qDebug("切换被动模式失败");
+        return 0;
+    }
 }
 
 int MainWindow::logoutserver() {

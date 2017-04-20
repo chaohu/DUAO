@@ -7,10 +7,13 @@ using namespace std;
 class FTPManager
 {
 private:
-    char sendBuf[20];
-    char recvBuf[50];
+    string host;
 
-    SOCKET sockClient;
+    char sendBuf[20];
+    char recvBuf[200];
+
+    SOCKET control_sock;
+    SOCKET data_sock;
 
 public:
     FTPManager();
