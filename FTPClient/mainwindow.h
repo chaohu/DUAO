@@ -2,8 +2,12 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <string>
+#include <vector>
+using namespace std;
 
 #include <QLineEdit>
+#include <QLabel>
 
 #include <QListView>
 #include <QStandardItem>
@@ -14,6 +18,19 @@ namespace Ui {
 class MainWindow;
 }
 
+struct dir_list {
+    int num;
+    char authority[15];
+    unsigned int node;
+    char user[15];
+    char group[15];
+    unsigned int size;
+    char mouth[15];
+    char day[5];
+    char ntime[10];
+    char name[50];
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -23,11 +40,15 @@ public:
     ~MainWindow();
 
 private:
+    vector<dir_list> dir_info_list;
+
+private:
     Ui::MainWindow *ui;
     QLineEdit *host_e;
     QLineEdit *username_e;
     QLineEdit *pwd_e;
     QLineEdit *port_e;
+    QLabel *state_info;
     QListView *locallist;
     QListView *serverlist;
     QStandardItemModel *localstandardItemModel;
@@ -36,6 +57,7 @@ private slots:
     int loginserver();
     int setactvmode();
     int setpassmode();
+    int analysis_dir(string dir_info);
     int logoutserver();
     void localitemClicked(QModelIndex index);
     void serveritemClicked(QModelIndex index);
