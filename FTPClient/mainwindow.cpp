@@ -1,7 +1,8 @@
+#include "ftpmanager.h"
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "ftpmanager.h"
 
+#include <QDir>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -56,28 +57,34 @@ MainWindow::MainWindow(QWidget *parent) :
     mainlayout->addWidget(state_info);
 
     //底部左侧布局
-    local_init_qsitem = new QStandardItem("本地目录列表待实现");
+    QVBoxLayout *bottomlayout_left = new QVBoxLayout();
+    QLabel *local_dir = new QLabel("本地目录列表:");
+    bottomlayout_left->addWidget(local_dir);
     locallist = new QListView();
     localstandardItemModel = new QStandardItemModel();
-    QStandardItem _local_init_qsitem = *local_init_qsitem;
-    localstandardItemModel->appendRow(&_local_init_qsitem);
+    analysis_local_dir(QDir::currentPath());
+    QStandardItem *local_init_qsitem = new QStandardItem("本地目录列表待实现");
+    localstandardItemModel->appendRow(local_init_qsitem);
     locallist->setModel(localstandardItemModel);
     connect(locallist,SIGNAL(clicked(QModelIndex)),this,SLOT(localitemClicked(QModelIndex)));
+    bottomlayout_left->addWidget(locallist);
 
     //底部右侧布局
-    server_init_qsitem = new QStandardItem("当前未连接任何服务器");
-    server_parent_dir = new QStandardItem("d: ..");
+    QVBoxLayout *bottomlayout_right = new QVBoxLayout();
+    QLabel *server_dir = new QLabel("服务器目录列表:");
+    bottomlayout_right->addWidget(server_dir);
     serverlist = new QListView();
     serverstandardItemModel = new QStandardItemModel();
-    QStandardItem _server_init_qsitem = *server_init_qsitem;
-    serverstandardItemModel->appendRow(&_server_init_qsitem);
+    QStandardItem *server_init_qsitem = new QStandardItem("当前未连接任何服务器");
+    serverstandardItemModel->appendRow(server_init_qsitem);
     serverlist->setModel(serverstandardItemModel);
     connect(serverlist,SIGNAL(clicked(QModelIndex)),this,SLOT(serveritemClicked(QModelIndex)));
+    bottomlayout_right->addWidget(serverlist);
 
     //底部布局
     QHBoxLayout *bottomlayout = new QHBoxLayout();
-    bottomlayout->addWidget(locallist);
-    bottomlayout->addWidget(serverlist);
+    bottomlayout->addLayout(bottomlayout_left);
+    bottomlayout->addLayout(bottomlayout_right);
 
 
     mainlayout->addLayout(bottomlayout);
@@ -103,7 +110,7 @@ int MainWindow::loginserver() {
     else {
         result_login result = ftpmanager->loginserver(host,username,password,port.toInt());
         if(result.state == 1) {
-            analysis_dir(result.dir_info);
+            analysis_server_dir(result.server_dir_info);
             string temp = "连接状态：连接至";
             temp.append(host.data());
             state_info->setText(temp.data());
@@ -150,22 +157,38 @@ int MainWindow::setpassmode() {
     }
 }
 
+int MainWindow::analysis_local_dir(QString local_dir_info) {
+    DIR *dir;
+    struct dirent *ptr;
+    if((dir = opendir(local_dir_info.toStdString().data())) == NULL) {
+        qDebug("打开本地文件目录%s失败",local_dir_info.toStdString().data());
+        return 0;
+    }
+    else {
+        while((ptr = readdir(dir)) != NULL) {
+            qDebug(ptr->d_name);
+        }
+        closedir(dir);
+        return 1;
+    }
+}
+
 /*
  * 函数功能：解析文件目录信息并显示
  * 注意：注意测试此处是否需要+1,证实需要
  */
-int MainWindow::analysis_dir(string dir_info) {
+int MainWindow::analysis_server_dir(string server_dir_info) {
     dir_info_list.clear();
     serverstandardItemModel->clear();
-    QStandardItem _server_parent_dir = *server_parent_dir;
-    serverstandardItemModel->appendRow(&_server_parent_dir);
+    QStandardItem *server_parent_dir = new QStandardItem("d: ..");
+    serverstandardItemModel->appendRow(server_parent_dir);
     int i = 1;	//文件目录编号从1开始，0留给".."
     unsigned int first = 0;
     unsigned int last = 0;
-    while((last = dir_info.find('\n',last)) != string::npos) {
+    while((last = server_dir_info.find('\n',last)) != string::npos) {
         dir_list temp;
         temp.num = i;
-        sscanf(dir_info.substr(first,last).data(),"%s%d%s%s%d%s%s%s%s",temp.authority,&(temp.node),temp.user,temp.group,&(temp.size),temp.mouth,temp.day,temp.ntime,temp.name);
+        sscanf(server_dir_info.substr(first,last).data(),"%s%d%s%s%d%s%s%s%s",temp.authority,&(temp.node),temp.user,temp.group,&(temp.size),temp.mouth,temp.day,temp.ntime,temp.name);
         QString dir_name;
         if(temp.authority[0] == 'd') dir_name = "d: ";
         else dir_name = "f: ";
@@ -185,8 +208,8 @@ int MainWindow::analysis_dir(string dir_info) {
 int MainWindow::logoutserver() {
     if(ftpmanager->logoutserver()) {
         serverstandardItemModel->clear();
-        QStandardItem &_server_init_qsitem = *server_init_qsitem;
-        serverstandardItemModel->appendRow(&_server_init_qsitem);
+        QStandardItem *server_init_qsitem = new QStandardItem("当前未连接任何服务器");
+        serverstandardItemModel->appendRow(server_init_qsitem);
         serverlist->setModel(serverstandardItemModel);
         state_info->setText("连接状态：已断开");
         return 0;

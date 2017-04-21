@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <dirent.h>
 #include <string>
 #include <vector>
 using namespace std;
@@ -42,12 +43,6 @@ public:
 private:
     vector<dir_list> dir_info_list;
 
-//默认界面显示
-private:
-    QStandardItem *local_init_qsitem;
-    QStandardItem *server_init_qsitem;
-    QStandardItem *server_parent_dir;
-
 private:
     Ui::MainWindow *ui;
     QLineEdit *host_e;
@@ -63,7 +58,8 @@ private slots:
     int loginserver();
     int setactvmode();
     int setpassmode();
-    int analysis_dir(string dir_info);
+    int analysis_local_dir(QString local_dir_info);
+    int analysis_server_dir(string server_dir_info);
     int logoutserver();
     void localitemClicked(QModelIndex index);
     void serveritemClicked(QModelIndex index);

@@ -40,14 +40,14 @@ result_login FTPManager::loginserver(const std::string host,const std::string us
         sprintf(sendBuf,"LIST \r\n");
         send(control_sock,sendBuf,strlen(sendBuf),0);
         qDebug("LIST返回信息：");
-        string dir_info = "";
+        string server_dir_info = "";
         while(recv(data_sock,recvBuf,195,0) > 0) {
-            dir_info.append(recvBuf);
+            server_dir_info.append(recvBuf);
             memset(recvBuf,0,sizeof(recvBuf));
         }
         memset(recvBuf,0,sizeof(recvBuf));
-        qDebug("%s",dir_info.data());
-        result.dir_info = dir_info;
+        qDebug("%s",server_dir_info.data());
+        result.server_dir_info = server_dir_info;
     }
     result.state = conn_result.state;
     return result;

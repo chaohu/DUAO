@@ -11,7 +11,7 @@ struct result_socket_conn {
 
 struct result_login {
     int state;
-    string dir_info;
+    string server_dir_info;
 };
 
 class FTPManager
