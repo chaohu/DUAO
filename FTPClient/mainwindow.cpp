@@ -56,32 +56,21 @@ MainWindow::MainWindow(QWidget *parent) :
     mainlayout->addWidget(state_info);
 
     //底部左侧布局
+    local_init_qsitem = new QStandardItem("本地目录列表待实现");
     locallist = new QListView();
     localstandardItemModel = new QStandardItemModel();
-    QStringList localstrlist;
-    localstrlist.append("hehe");
-    localstrlist.append("wowo");
-    localstrlist.append("qpqp");
-    for(int i = 0;i < localstrlist.size();i++) {
-        QString localstring = static_cast<QString>(localstrlist.at(i));
-        QStandardItem *localitem = new QStandardItem(localstring);
-        localstandardItemModel->appendRow(localitem);
-    }
+    QStandardItem _local_init_qsitem = *local_init_qsitem;
+    localstandardItemModel->appendRow(&_local_init_qsitem);
     locallist->setModel(localstandardItemModel);
     connect(locallist,SIGNAL(clicked(QModelIndex)),this,SLOT(localitemClicked(QModelIndex)));
 
     //底部右侧布局
+    server_init_qsitem = new QStandardItem("当前未连接任何服务器");
+    server_parent_dir = new QStandardItem("d: ..");
     serverlist = new QListView();
     serverstandardItemModel = new QStandardItemModel();
-    QStringList serverstrlist;
-    serverstrlist.append("hehe");
-    serverstrlist.append("wowo");
-    serverstrlist.append("qpqp");
-    for(int i = 0;i < serverstrlist.size();i++) {
-        QString serverstring = static_cast<QString>(serverstrlist.at(i));
-        QStandardItem *serveritem = new QStandardItem(serverstring);
-        serverstandardItemModel->appendRow(serveritem);
-    }
+    QStandardItem _server_init_qsitem = *server_init_qsitem;
+    serverstandardItemModel->appendRow(&_server_init_qsitem);
     serverlist->setModel(serverstandardItemModel);
     connect(serverlist,SIGNAL(clicked(QModelIndex)),this,SLOT(serveritemClicked(QModelIndex)));
 
@@ -161,33 +150,32 @@ int MainWindow::setpassmode() {
     }
 }
 
-
-//注意测试此处是否需要+1
+/*
+ * 函数功能：解析文件目录信息并显示
+ * 注意：注意测试此处是否需要+1,证实需要
+ */
 int MainWindow::analysis_dir(string dir_info) {
     dir_info_list.clear();
-    int i = 0;
+    serverstandardItemModel->clear();
+    QStandardItem _server_parent_dir = *server_parent_dir;
+    serverstandardItemModel->appendRow(&_server_parent_dir);
+    int i = 1;	//文件目录编号从1开始，0留给".."
     unsigned int first = 0;
     unsigned int last = 0;
-    while((last = dir_info.find('\r\n',last)) != string::npos) {
+    while((last = dir_info.find('\n',last)) != string::npos) {
         dir_list temp;
         temp.num = i;
-        sscanf(dir_info.substr(first,last),"%s%d%s%s%d%s%s%s%s",temp.authority,&(temp.node),temp.name,
-               temp.group,&(temp.size),temp.mouth,temp.day,temp.ntime,temp.name);
-        QString dir_name = temp.name;
+        sscanf(dir_info.substr(first,last).data(),"%s%d%s%s%d%s%s%s%s",temp.authority,&(temp.node),temp.user,temp.group,&(temp.size),temp.mouth,temp.day,temp.ntime,temp.name);
+        QString dir_name;
+        if(temp.authority[0] == 'd') dir_name = "d: ";
+        else dir_name = "f: ";
+        dir_name.append(temp.name);
         QStandardItem *item = new QStandardItem(dir_name);
         serverstandardItemModel->appendRow(item);
         dir_info_list.push_back(temp);
-        first = last;
+        first = ++last;
         i++;
     }
-    dir_list temp;
-    temp.num = i;
-    sscanf(dir_info.substr(first,last),"%s%d%s%s%d%s%s%s%s",temp.authority,&(temp.node),temp.name,
-           temp.group,&(temp.size),temp.mouth,temp.day,temp.ntime,temp.name);
-    QString dir_name = temp.name;
-    QStandardItem *item = new QStandardItem(dir_name);
-    serverstandardItemModel->appendRow(item);
-    dir_info_list.push_back(temp);
     serverlist->setModel(serverstandardItemModel);
 
     return 1;
@@ -196,6 +184,10 @@ int MainWindow::analysis_dir(string dir_info) {
 
 int MainWindow::logoutserver() {
     if(ftpmanager->logoutserver()) {
+        serverstandardItemModel->clear();
+        QStandardItem &_server_init_qsitem = *server_init_qsitem;
+        serverstandardItemModel->appendRow(&_server_init_qsitem);
+        serverlist->setModel(serverstandardItemModel);
         state_info->setText("连接状态：已断开");
         return 0;
     }

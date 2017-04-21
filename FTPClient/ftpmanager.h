@@ -31,7 +31,7 @@ public:
     ~FTPManager();
 
     //主函数
-    int loginserver(const std::string host,const std::string username,const std::string password,const int port);//登陆服务器
+    result_login loginserver(const std::string host,const std::string username,const std::string password,const int port);//登陆服务器
     result_socket_conn socket_conn(const char *host,const int port);	//创建一个socket连接
     int setactvmode();//设置主动态
     int setpassmode();//设置被动态

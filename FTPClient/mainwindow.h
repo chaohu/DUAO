@@ -42,6 +42,12 @@ public:
 private:
     vector<dir_list> dir_info_list;
 
+//默认界面显示
+private:
+    QStandardItem *local_init_qsitem;
+    QStandardItem *server_init_qsitem;
+    QStandardItem *server_parent_dir;
+
 private:
     Ui::MainWindow *ui;
     QLineEdit *host_e;
