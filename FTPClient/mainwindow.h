@@ -58,7 +58,7 @@ private slots:
     int loginserver();
     int setactvmode();
     int setpassmode();
-    int analysis_local_dir(QString local_dir_info);
+    int analysis_local_dir(QString local_dir_path);
     int analysis_server_dir(string server_dir_info);
     int logoutserver();
     void localitemClicked(QModelIndex index);

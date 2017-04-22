@@ -63,9 +63,6 @@ MainWindow::MainWindow(QWidget *parent) :
     locallist = new QListView();
     localstandardItemModel = new QStandardItemModel();
     analysis_local_dir(QDir::currentPath());
-    QStandardItem *local_init_qsitem = new QStandardItem("本地目录列表待实现");
-    localstandardItemModel->appendRow(local_init_qsitem);
-    locallist->setModel(localstandardItemModel);
     connect(locallist,SIGNAL(clicked(QModelIndex)),this,SLOT(localitemClicked(QModelIndex)));
     bottomlayout_left->addWidget(locallist);
 
@@ -157,20 +154,23 @@ int MainWindow::setpassmode() {
     }
 }
 
-int MainWindow::analysis_local_dir(QString local_dir_info) {
-    DIR *dir;
-    struct dirent *ptr;
-    if((dir = opendir(local_dir_info.toStdString().data())) == NULL) {
-        qDebug("打开本地文件目录%s失败",local_dir_info.toStdString().data());
-        return 0;
+int MainWindow::analysis_local_dir(QString local_dir_path) {
+    localstandardItemModel->clear();
+    QDir dir(local_dir_path);
+    dir.setFilter(QDir::AllEntries|QDir::NoDot);
+    QFileInfoList local_dir_list = dir.entryInfoList();
+
+    for(int i = 0;i < local_dir_list.size();i++) {
+        qDebug() << local_dir_list.at(i).fileName();
+        QString dir_name;
+        if(local_dir_list.at(i).isDir()) dir_name = "d: ";
+        else dir_name = "f: ";
+        dir_name.append(local_dir_list.at(i).fileName().toStdString().data());
+        QStandardItem *temp = new QStandardItem(dir_name);
+        localstandardItemModel->appendRow(temp);
     }
-    else {
-        while((ptr = readdir(dir)) != NULL) {
-            qDebug(ptr->d_name);
-        }
-        closedir(dir);
-        return 1;
-    }
+    locallist->setModel(localstandardItemModel);
+    return 1;
 }
 
 /*
