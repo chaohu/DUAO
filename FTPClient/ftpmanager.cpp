@@ -39,6 +39,12 @@ result_login FTPManager::loginserver(const std::string host,const std::string us
         //获取根目录列表
         sprintf(sendBuf,"LIST \r\n");
         send(control_sock,sendBuf,strlen(sendBuf),0);
+        recv(control_sock,recvBuf,195,0);
+        qDebug(recvBuf);
+        memset(recvBuf,0,sizeof(recvBuf));
+        recv(control_sock,recvBuf,195,0);
+        qDebug(recvBuf);
+        memset(recvBuf,0,sizeof(recvBuf));
         qDebug("LIST返回信息：");
         string server_dir_info = "";
         while(recv(data_sock,recvBuf,195,0) > 0) {
@@ -114,6 +120,43 @@ int FTPManager::setpassmode() {
     if(conn_result.state == 1) data_sock = conn_result._socket;
 
     return conn_result.state;
+}
+
+int FTPManager::file_download(string filename) {
+    sprintf(sendBuf,"SIZE %s\r\n",filename.data());
+    send(control_sock,sendBuf,strlen(sendBuf),0);
+    recv(control_sock,recvBuf,195,0);
+    qDebug(recvBuf);
+    memset(recvBuf,0,sizeof(recvBuf));
+    sprintf(sendBuf,"TYPE I\r\n");
+    send(control_sock,sendBuf,strlen(sendBuf),0);
+    recv(control_sock,recvBuf,195,0);
+    qDebug(recvBuf);
+    memset(recvBuf,0,sizeof(recvBuf));
+    setpassmode();
+    sprintf(sendBuf,"RETR %s\r\n",filename.data());
+    send(control_sock,sendBuf,strlen(sendBuf),0);
+    recv(control_sock,recvBuf,195,0);
+    qDebug(recvBuf);
+    memset(recvBuf,0,sizeof(recvBuf));
+
+    //客户端创建文件
+    FILE *file;
+    if((file = fopen(filename.data(),"wb")) == NULL) {
+        qDebug("创建文件夹失败");
+        while(recv(data_sock,recvBuf,195,0) > 0);
+        memset(recvBuf,0,sizeof(recvBuf));
+        return 0;
+    }
+    else {
+        qDebug("创建文件夹成功");
+        while(recv(data_sock,recvBuf,195,0) > 0) {
+            fwrite(recvBuf,1,195,file);
+            memset(recvBuf,0,sizeof(recvBuf));
+        }
+        fclose(file);
+        return 1;
+    }
 }
 
 

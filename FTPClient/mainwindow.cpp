@@ -60,9 +60,18 @@ MainWindow::MainWindow(QWidget *parent) :
     QVBoxLayout *bottomlayout_left = new QVBoxLayout();
     QLabel *local_dir = new QLabel("本地目录列表:");
     bottomlayout_left->addWidget(local_dir);
+    QHBoxLayout *local_path_show = new QHBoxLayout();
+    QLineEdit *local_path = new QLineEdit();
+    QString current_path = QDir::currentPath();
+    local_path->setText(current_path);
+    local_path_show->addWidget(local_path);
+    local_path_show->addStretch();
+    QPushButton *ch_dir = new QPushButton("确定");
+    local_path_show->addWidget(ch_dir);
+    bottomlayout_left->addLayout(local_path_show);
     locallist = new QListView();
     localstandardItemModel = new QStandardItemModel();
-    analysis_local_dir(QDir::currentPath());
+    analysis_local_dir(current_path);
     connect(locallist,SIGNAL(clicked(QModelIndex)),this,SLOT(localitemClicked(QModelIndex)));
     bottomlayout_left->addWidget(locallist);
 
@@ -228,4 +237,11 @@ void MainWindow::localitemClicked(QModelIndex index) {
 
 void MainWindow::serveritemClicked(QModelIndex index) {
     qDebug()<<index.data().toString();
+    if(index.data().toString().toStdString().data()[0] == 'd') return;
+    else {
+        if(ftpmanager->file_download(index.data().toString().toStdString().substr(3)) == 1) {
+            analysis_local_dir(QDir::currentPath());
+            return;
+        }
+    }
 }

@@ -36,6 +36,7 @@ public:
     int setactvmode();//设置主动态
     int setpassmode();//设置被动态
     SOCKET pass_conn(SOCKET control_sock);//被动态连接
+    int file_download(string filename);//从服务器下载文件
     int logoutserver();//断开服务器连接
 
     //辅助函数
