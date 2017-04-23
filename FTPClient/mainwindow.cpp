@@ -65,7 +65,6 @@ MainWindow::MainWindow(QWidget *parent) :
     QString current_path = QDir::currentPath();
     local_path->setText(current_path);
     local_path_show->addWidget(local_path);
-    local_path_show->addStretch();
     QPushButton *ch_dir = new QPushButton("确定");
     local_path_show->addWidget(ch_dir);
     bottomlayout_left->addLayout(local_path_show);
@@ -115,17 +114,17 @@ int MainWindow::loginserver() {
     }
     else {
         result_login result = ftpmanager->loginserver(host,username,password,port.toInt());
-        if(result.state == 1) {
+        if(result.state) {
             analysis_server_dir(result.server_dir_info);
             string temp = "连接状态：连接至";
             temp.append(host.data());
             state_info->setText(temp.data());
             return 1;
         }
-        else if(result.state == 2) {
-            state_info->setText("连接状态：重复连接");
-            return 2;
-        }
+//        else if(result.state == 2) {
+//            state_info->setText("连接状态：重复连接");
+//            return 2;
+//        }
         else {
             state_info->setText("连接状态：连接失败");
             return 0;
@@ -133,34 +132,55 @@ int MainWindow::loginserver() {
     }
 }
 
+
+//设置为主动模式
 int MainWindow::setactvmode() {
-    if(ftpmanager->setactvmode()) {
+    if(ftpmanager->mode_flag == 1) {
+        qDebug("当前正在主动模式");
+        return 0;
+    }
+    else {
+        ftpmanager->mode_flag = 1;
         qDebug("成功切换至主动模式");
         return 1;
     }
-    else {
-        qDebug("切换主动模式失败");
-        return 0;
-    }
+//    if(ftpmanager->setactvmode()) {
+//        qDebug("成功切换至主动模式");
+//        return 1;
+//    }
+//    else {
+//        qDebug("切换主动模式失败");
+//        return 0;
+//    }
 }
 
+//设置为被动模式
 int MainWindow::setpassmode() {
-    int state = ftpmanager->setpassmode();
-    if(state == 1) {
-        state_info->setText("成功切换至被动模式");
+    if(ftpmanager->mode_flag == 0) {
+        qDebug("当前正在被动模式");
+        return 0;
+    }
+    else {
+        ftpmanager->mode_flag = 0;
         qDebug("成功切换至被动模式");
         return 1;
     }
-    else if(state == 2) {
-        state_info->setText("当前正在被动模式");
-        qDebug("当前正在被动模式");
-        return 2;
-    }
-    else {
-        state_info->setText("切换被动模式失败");
-        qDebug("切换被动模式失败");
-        return 0;
-    }
+//    int state = ftpmanager->setpassmode();
+//    if(state == 1) {
+//        state_info->setText("成功切换至被动模式");
+//        qDebug("成功切换至被动模式");
+//        return 1;
+//    }
+//    else if(state == 2) {
+//        state_info->setText("当前正在被动模式");
+//        qDebug("当前正在被动模式");
+//        return 2;
+//    }
+//    else {
+//        state_info->setText("切换被动模式失败");
+//        qDebug("切换被动模式失败");
+//        return 0;
+//    }
 }
 
 int MainWindow::analysis_local_dir(QString local_dir_path) {
