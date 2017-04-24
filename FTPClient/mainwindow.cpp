@@ -135,12 +135,12 @@ int MainWindow::loginserver() {
 
 //设置为主动模式
 int MainWindow::setactvmode() {
-    if(ftpmanager->mode_flag == 1) {
+    if(ftpmanager->getmode() == 1) {
         qDebug("当前正在主动模式");
         return 0;
     }
     else {
-        ftpmanager->mode_flag = 1;
+        ftpmanager->setactvmode();
         qDebug("成功切换至主动模式");
         return 1;
     }
@@ -156,12 +156,13 @@ int MainWindow::setactvmode() {
 
 //设置为被动模式
 int MainWindow::setpassmode() {
-    if(ftpmanager->mode_flag == 0) {
+    if(ftpmanager->getmode() == 0) {
         qDebug("当前正在被动模式");
         return 0;
     }
     else {
-        ftpmanager->mode_flag = 0;
+        closesocket(ftpmanager->getdatasock());
+        ftpmanager->setpassmode();
         qDebug("成功切换至被动模式");
         return 1;
     }
@@ -257,7 +258,11 @@ void MainWindow::localitemClicked(QModelIndex index) {
 
 void MainWindow::serveritemClicked(QModelIndex index) {
     qDebug()<<index.data().toString();
-    if(index.data().toString().toStdString().data()[0] == 'd') return;
+    if(index.data().toString().toStdString().data()[0] == 'd') {
+        if(ftpmanager->ch_server_dir(index.data().toString().toStdString().substr(3))) {
+
+        }
+    }
     else {
         if(ftpmanager->file_download(index.data().toString().toStdString().substr(3)) == 1) {
             analysis_local_dir(QDir::currentPath());
