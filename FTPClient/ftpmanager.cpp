@@ -87,6 +87,10 @@ int FTPManager::init_sock() {
     return 1;
 }
 
+int FTPManager::send_order() {
+    return 1;
+}
+
 int FTPManager::socket_conn(SOCKET *_socket,const int port) {
     SOCKADDR_IN addrSrv;
     addrSrv.sin_addr.S_un.S_addr = inet_addr(host.data());
@@ -144,7 +148,7 @@ int FTPManager::setactvmode() {
     act_port_part1 = port_part1;
     act_port_part2 = port_part2;
 
-    listen(data_sock,64);
+    listen(data_sock,5);
 
 
     mode_flag = 1;	//主动模式
@@ -183,36 +187,38 @@ int FTPManager::file_download(string filename) {
 //主动模式下载
 int FTPManager::file_download_act(string filename) {
     int flag = 0;
-    int state_code1,state_code2;
+    int state_code;
 
     sprintf(sendBuf,"SIZE %s\r\n",filename.data());
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
-    sscanf(recvBuf,"%d ",&state_code1);
+    sscanf(recvBuf,"%d ",&state_code);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
-    if(state_code1 != 213) return 0;
+    if(state_code != 213) return 0;
 
     sprintf(sendBuf,"TYPE I\r\n");
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
-    sscanf(recvBuf,"%d ",&state_code1);
+    sscanf(recvBuf,"%d ",&state_code);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
-    if(state_code1 != 200) return 0;
+    if(state_code != 200) return 0;
+
+    if(!setactvmode()) return 0;
 
     sprintf(sendBuf,"PORT 127,0,0,1,%d,%d\r\n",act_port_part1,act_port_part2);
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
-    sscanf(recvBuf,"%d ",&state_code1);
+    sscanf(recvBuf,"%d ",&state_code);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
-    if(state_code1 != 200) return 0;
+    if(state_code != 200) return 0;
 
     sprintf(sendBuf,"RETR %s\r\n",filename.data());
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
-    sscanf(recvBuf,"%d ",&state_code1);
+    sscanf(recvBuf,"%d ",&state_code);
 //    string message(recvBuf);
 //    qDebug(message.substr(message.find('\n',0)+1).data());
     qDebug(recvBuf);
@@ -220,17 +226,17 @@ int FTPManager::file_download_act(string filename) {
 //    if(state_code1 != 150/* || state_code2 != 226*/) {
 //        return 0;
 //    }
-    if(state_code1 != 150) return 0;
+    if(state_code != 150) return 0;
 //    if(message.find('\n',message.find('\n',0)+1) != string::npos) {
 //        qDebug("wocha");
 //        return 0;
 //    }
 
     recv(control_sock,recvBuf,195,0);
-    sscanf(recvBuf,"%d ",&state_code1);
+    sscanf(recvBuf,"%d ",&state_code);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
-    if(state_code1 != 226) return 0;
+    if(state_code != 226) return 0;
 
     SOCKET file_socket = socket(AF_INET,SOCK_STREAM,0);
     if(socket_accept(&file_socket)) {
@@ -238,7 +244,7 @@ int FTPManager::file_download_act(string filename) {
         flag = writetofile(file_socket,filename.data());
         closesocket(file_socket);
     }
-
+    closesocket(data_sock);
 
 
     return flag;

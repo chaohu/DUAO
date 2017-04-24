@@ -33,6 +33,7 @@ public:
     //主函数
     result_login loginserver(const std::string host,const std::string username,const std::string password,const int port);//登陆服务器
     int init_sock();//初始化socket资源
+    int send_order();//发送命令
     int socket_conn(SOCKET *_socket,const int port);	//创建一个socket连接
     int socket_accept(SOCKET *_socket);//接受一个socket连接
     int setactvmode();//设置主动态
