@@ -114,6 +114,7 @@ int FTPManager::socket_accept(SOCKET *_socket) {
     addrSrv.sin_family = AF_INET;
     addrSrv.sin_port = htons(20);
     int len = sizeof(SOCKADDR);
+    qDebug("conn");
     *_socket = accept(data_sock,(SOCKADDR*)&addrSrv,&len);
     if(INVALID_SOCKET == *_socket) {
         char error_info[10];
@@ -212,26 +213,33 @@ int FTPManager::file_download_act(string filename) {
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
     sscanf(recvBuf,"%d ",&state_code1);
-    string message(recvBuf);
-    sscanf(message.substr(message.find('\n',0)).data(),"%d ",&state_code2);
+//    string message(recvBuf);
+//    qDebug(message.substr(message.find('\n',0)+1).data());
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
 //    if(state_code1 != 150/* || state_code2 != 226*/) {
 //        return 0;
 //    }
-
     if(state_code1 != 150) return 0;
-    if(message.find_first_not_of('\n',0) != string::npos) return 0;
+//    if(message.find('\n',message.find('\n',0)+1) != string::npos) {
+//        qDebug("wocha");
+//        return 0;
+//    }
+
+    recv(control_sock,recvBuf,195,0);
+    sscanf(recvBuf,"%d ",&state_code1);
+    qDebug(recvBuf);
+    memset(recvBuf,0,sizeof(recvBuf));
+    if(state_code1 != 226) return 0;
 
     SOCKET file_socket = socket(AF_INET,SOCK_STREAM,0);
     if(socket_accept(&file_socket)) {
+        qDebug("wolai");
         flag = writetofile(file_socket,filename.data());
         closesocket(file_socket);
     }
 
-    recv(control_sock,recvBuf,195,0);
-    qDebug(recvBuf);
-    memset(recvBuf,0,sizeof(recvBuf));
+
 
     return flag;
 }
