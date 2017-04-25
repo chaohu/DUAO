@@ -1,7 +1,8 @@
 #include "ftpmanager.h"
 #include <QDebug>
 
-FTPManager::FTPManager() {
+FTPManager::FTPManager(MainWindow *mainwindow) {
+    FTPManager::mainwindow = mainwindow;
 }
 
 FTPManager::~FTPManager() {
@@ -9,19 +10,12 @@ FTPManager::~FTPManager() {
 }
 
 
-result_login FTPManager::loginserver(const std::string host,const std::string username,const std::string password,const int port) {
+int FTPManager::loginserver(const std::string host,const std::string username,const std::string password,const int port) {
     FTPManager::host = host;
-    result_login result;
 
-    if(init_sock() == 0) {
-        result.state = 0;
-        return result;
-    }
+    if(init_sock() == 0) return 0;
 
-    if(!socket_conn(&control_sock,port)) {
-        result.state = 0;
-        return result;
-    }
+    if(!socket_conn(&control_sock,port)) return 0;
 
     recv(control_sock,recvBuf,195,0);
     qDebug("链接命令端口返回消息:%s",recvBuf);
@@ -29,44 +23,11 @@ result_login FTPManager::loginserver(const std::string host,const std::string us
 
     //登陆到服务器
     sprintf(sendBuf,"USER %s\r\n",username.data());
-    send(control_sock,sendBuf,strlen(sendBuf),0);
-    recv(control_sock,recvBuf,195,0);
-    qDebug("输入用户名:%s",recvBuf);
-    memset(recvBuf,0,sizeof(recvBuf));
+    if(!send_order(sendBuf)) return 0;
+
     sprintf(sendBuf,"PASS %s\r\n",password.data());
-    send(control_sock,sendBuf,strlen(sendBuf),0);
-    recv(control_sock,recvBuf,195,0);
-    qDebug("输入密码返回消息:%s",recvBuf);
-    memset(recvBuf,0,sizeof(recvBuf));
+    return send_order(sendBuf);
 
-    //切换服务器至被动态,连接数据端口
-    if(!setpassmode()) {
-        result.state = 0;
-        return result;
-    }
-
-    //获取根目录列表
-    sprintf(sendBuf,"LIST \r\n");
-    send(control_sock,sendBuf,strlen(sendBuf),0);
-    recv(control_sock,recvBuf,195,0);
-    qDebug(recvBuf);
-    memset(recvBuf,0,sizeof(recvBuf));
-    recv(control_sock,recvBuf,195,0);
-    qDebug(recvBuf);
-    memset(recvBuf,0,sizeof(recvBuf));
-    qDebug("LIST返回信息：");
-    string server_dir_info = "";
-    while(recv(data_sock,recvBuf,195,0) > 0) {
-        server_dir_info.append(recvBuf);
-        memset(recvBuf,0,sizeof(recvBuf));
-    }
-    closesocket(data_sock);
-    memset(recvBuf,0,sizeof(recvBuf));
-    qDebug("%s",server_dir_info.data());
-    result.server_dir_info = server_dir_info;
-
-    result.state = 1;
-    return result;
 }
 
 int FTPManager::init_sock() {
@@ -87,8 +48,14 @@ int FTPManager::init_sock() {
     return 1;
 }
 
-int FTPManager::send_order() {
-    return 1;
+int FTPManager::send_order(string order) {
+    char recv_message[200];
+    int state_code = -1;
+    send(control_sock,order.data(),strlen(order.data()),0);
+    recv(control_sock,recv_message,195,0);
+    qDebug("%s",recv_message);
+    sscanf(recv_message,"%d ",&state_code);
+    return state_code;
 }
 
 int FTPManager::socket_conn(SOCKET *_socket,const int port) {
@@ -150,34 +117,65 @@ int FTPManager::setactvmode() {
 
     listen(data_sock,5);
 
-
-    mode_flag = 1;	//主动模式
     return 1;
 }
 
 int FTPManager::setpassmode() {
+    int state_code = -1;
     //发送让服务器切换至被动态的命令
     sprintf(sendBuf,"PASV\r\n");
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
     qDebug("被动态返回信息:%s",recvBuf);
+    sscanf(recvBuf,"%d ",&state_code);
+    if(state_code != 227) {
+        memset(recvBuf,0,sizeof(recvBuf));
+        return 0;
+    }
     int port = getport(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
-    mode_flag = 0;	//被动模式
     data_sock = socket(AF_INET,SOCK_STREAM,0);
     return socket_conn(&data_sock,port);
 }
 
 //改变服务器工作目录
 int FTPManager::ch_server_dir(string path) {
-    if(path == "..") sprintf(sendBuf,"CDUP\r\n");
-    else sprintf(sendBuf,"CWD %s\r\n",path.data());
-    send(control_sock,sendBuf,strlen(sendBuf),0);
+    if(path == "..") {
+        if(send_order("CDUP\r\n") == 200) return 1;
+        else return 0;
+    }
+    else {
+        sprintf(sendBuf,"CWD %s\r\n",path.data());
+        if(send_order(sendBuf) == 250) return 1;
+        else return 0;
+    }
+}
+
+//获取服务器目录文件列表
+int FTPManager::get_dir_list() {
+    int state_code = -1;
+    //切换服务器至被动态,连接数据端口
+    if(!setpassmode()) return 0;
+
+    //获取根目录列表
+    if(send_order("LIST \r\n") != 150) return 0;
     recv(control_sock,recvBuf,195,0);
     qDebug(recvBuf);
+    sscanf(recvBuf,"%d ",&state_code);
     memset(recvBuf,0,sizeof(recvBuf));
+    if(state_code != 226) return 0;
+    server_dir_list_info.clear();
+    qDebug("LIST返回信息：");
+    while(recv(data_sock,recvBuf,195,0) > 0) {
+        server_dir_list_info.append(recvBuf);
+        memset(recvBuf,0,sizeof(recvBuf));
+    }
+    closesocket(data_sock);
+    memset(recvBuf,0,sizeof(recvBuf));
+    qDebug("%s",server_dir_list_info.data());
     return 1;
 }
+
 
 int FTPManager::file_download(string filename) {
     if(mode_flag) return file_download_act(filename);
@@ -355,6 +353,12 @@ int FTPManager::getport(const char *recvBuf) {
 //获取当前模式
 int FTPManager::getmode() {
     return mode_flag;
+}
+
+//设置当前模式
+int FTPManager::setmode(int mode_flag) {
+    FTPManager::mode_flag = mode_flag;
+    return 1;
 }
 
 SOCKET FTPManager::getdatasock() {

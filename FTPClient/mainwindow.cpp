@@ -1,5 +1,4 @@
 #include "ftpmanager.h"
-#include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 #include <QDir>
@@ -9,7 +8,7 @@
 
 #include <QDebug>
 
-FTPManager *ftpmanager = new FTPManager();
+FTPManager *ftpmanager;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -18,7 +17,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     ui->menu->addAction("主动",this,SLOT(setactvmode()));
     ui->menu->addAction("被动",this,SLOT(setpassmode()));
-
+    ftpmanager = new FTPManager(this);
 
     //主题布局
     QVBoxLayout *mainlayout = new QVBoxLayout(this);
@@ -113,18 +112,24 @@ int MainWindow::loginserver() {
         return 0;
     }
     else {
-        result_login result = ftpmanager->loginserver(host,username,password,port.toInt());
-        if(result.state) {
-            analysis_server_dir(result.server_dir_info);
-            string temp = "连接状态：连接至";
-            temp.append(host.data());
-            state_info->setText(temp.data());
-            return 1;
+        if(ftpmanager->loginserver(host,username,password,port.toInt())) {
+            if(ftpmanager->get_dir_list()) {
+                if(analysis_server_dir(ftpmanager->server_dir_list_info)) {
+                    string temp = "连接状态：连接至";
+                    temp.append(host.data());
+                    state_info->setText(temp.data());
+                    return 1;
+                }
+                else {
+                    state_info->setText("连接状态：解析目录文件列表失败");
+                    return 0;
+                }
+            }
+            else {
+                state_info->setText("连接状态：获取目录文件列表失败");
+                return 0;
+            }
         }
-//        else if(result.state == 2) {
-//            state_info->setText("连接状态：重复连接");
-//            return 2;
-//        }
         else {
             state_info->setText("连接状态：连接失败");
             return 0;
@@ -140,7 +145,7 @@ int MainWindow::setactvmode() {
         return 0;
     }
     else {
-        ftpmanager->setactvmode();
+        ftpmanager->setmode(1);
         qDebug("成功切换至主动模式");
         return 1;
     }
@@ -161,8 +166,7 @@ int MainWindow::setpassmode() {
         return 0;
     }
     else {
-        closesocket(ftpmanager->getdatasock());
-        ftpmanager->setpassmode();
+        ftpmanager->setmode(0);
         qDebug("成功切换至被动模式");
         return 1;
     }
@@ -258,12 +262,17 @@ void MainWindow::localitemClicked(QModelIndex index) {
 
 void MainWindow::serveritemClicked(QModelIndex index) {
     qDebug()<<index.data().toString();
-    if(index.data().toString().toStdString().data()[0] == 'd') {
+    char type = index.data().toString().toStdString().data()[0];
+    if(type == 'd') {
         if(ftpmanager->ch_server_dir(index.data().toString().toStdString().substr(3))) {
+            if(ftpmanager->get_dir_list()) {
+                if(analysis_server_dir(ftpmanager->server_dir_list_info)) {
 
+                }
+            }
         }
     }
-    else {
+    else if(type == 'f'){
         if(ftpmanager->file_download(index.data().toString().toStdString().substr(3)) == 1) {
             analysis_local_dir(QDir::currentPath());
             return;
