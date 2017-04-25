@@ -20,7 +20,8 @@ private:
     SOCKET data_sock;
 
 public:
-    string server_dir_list_info;//服务器目录文件信息
+    char server_current_path[260];//服务器当前工作目录
+    string server_dir_list_info;//服务器目录文件列表信息
 
 public:
     FTPManager();
@@ -35,6 +36,7 @@ public:
     int socket_accept(SOCKET *_socket);//接受一个socket连接
     int setactvmode();//设置主动态
     int setpassmode();//设置被动态
+    int get_server_current_path();//获取服务器当前工作目录
     int ch_server_dir(string path);//改变服务器工作目录
     int get_dir_list();//获取当前目录文件列表
     int file_download_act(string filename);//主动模式从服务器下载文件

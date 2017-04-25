@@ -50,6 +50,8 @@ private:
     QLineEdit *pwd_e;
     QLineEdit *port_e;
     QLabel *state_info;
+    QLineEdit *local_path;
+    QLineEdit *server_path;
     QListView *locallist;
     QListView *serverlist;
     QListView *log_message_list;
@@ -60,6 +62,8 @@ private slots:
     int loginserver();
     int setactvmode();
     int setpassmode();
+    void f_ch_local_dir();
+    void f_ch_server_dir();
     int analysis_local_dir(QString local_dir_path);
     int analysis_server_dir(string server_dir_info);
     int logoutserver();

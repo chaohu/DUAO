@@ -61,12 +61,13 @@ MainWindow::MainWindow(QWidget *parent) :
     QLabel *local_dir = new QLabel("本地目录列表:");
     bottomlayout_left->addWidget(local_dir);
     QHBoxLayout *local_path_show = new QHBoxLayout();
-    QLineEdit *local_path = new QLineEdit();
+    local_path = new QLineEdit();
     QString current_local_path = QDir::currentPath();
     local_path->setText(current_local_path);
     local_path_show->addWidget(local_path);
-    QPushButton *ch_local_dir = new QPushButton("确定");
-    local_path_show->addWidget(ch_local_dir);
+    QPushButton *b_ch_local_dir = new QPushButton("确定");
+    connect(b_ch_local_dir,SIGNAL(clicked()),this,SLOT(f_ch_local_dir()));
+    local_path_show->addWidget(b_ch_local_dir);
     bottomlayout_left->addLayout(local_path_show);
     locallist = new QListView();
     localstandardItemModel = new QStandardItemModel();
@@ -80,10 +81,11 @@ MainWindow::MainWindow(QWidget *parent) :
     bottomlayout_right->addWidget(server_dir);
 
     QHBoxLayout *server_path_show = new QHBoxLayout();
-    QLineEdit *server_path = new QLineEdit();
+    server_path = new QLineEdit();
     server_path_show->addWidget(server_path);
-    QPushButton *ch_server_dir = new QPushButton("确定");
-    server_path_show->addWidget(ch_server_dir);
+    QPushButton *b_ch_server_dir = new QPushButton("确定");
+    connect(b_ch_server_dir,SIGNAL(clicked()),this,SLOT(f_ch_server_dir()));
+    server_path_show->addWidget(b_ch_server_dir);
     bottomlayout_right->addLayout(server_path_show);
 
     serverlist = new QListView();
@@ -138,6 +140,9 @@ int MainWindow::loginserver() {
                     string temp = "连接状态：连接至";
                     temp.append(host.data());
                     state_info->setText(temp.data());
+                    if(ftpmanager->get_server_current_path()) {
+                        server_path->setText(ftpmanager->server_current_path);
+                    }
                     return 1;
                 }
                 else {
@@ -181,6 +186,21 @@ int MainWindow::setpassmode() {
         ftpmanager->setmode(0);
         qDebug("成功切换至被动模式");
         return 1;
+    }
+}
+
+void MainWindow::f_ch_local_dir() {
+    qDebug("改变本地目录");
+}
+
+void MainWindow::f_ch_server_dir() {
+    qDebug("改变远端目录");
+    if(ftpmanager->ch_server_dir(server_path->text().toStdString())) {
+        if(ftpmanager->get_dir_list()) {
+            if(analysis_server_dir(ftpmanager->server_dir_list_info)) {
+
+            }
+        }
     }
 }
 
@@ -242,6 +262,7 @@ int MainWindow::logoutserver() {
         serverstandardItemModel->appendRow(server_init_qsitem);
         serverlist->setModel(serverstandardItemModel);
         state_info->setText("连接状态：已断开");
+        server_path->setText("");
         return 0;
     }
     else {
@@ -251,6 +272,7 @@ int MainWindow::logoutserver() {
         return 0;
     }
 }
+
 
 void MainWindow::localitemClicked(QModelIndex index) {
     qDebug()<<index.data().toString();
@@ -279,7 +301,9 @@ void MainWindow::serveritemClicked(QModelIndex index) {
         if(ftpmanager->ch_server_dir(index.data().toString().toStdString().substr(3))) {
             if(ftpmanager->get_dir_list()) {
                 if(analysis_server_dir(ftpmanager->server_dir_list_info)) {
-
+                    if(ftpmanager->get_server_current_path()) {
+                        server_path->setText(ftpmanager->server_current_path);
+                    }
                 }
             }
         }

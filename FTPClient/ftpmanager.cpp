@@ -140,6 +140,35 @@ int FTPManager::setpassmode() {
     return socket_conn(&data_sock,port);
 }
 
+//获取服务器当前工作目录
+int FTPManager::get_server_current_path() {
+    int state_code = -1;
+    int i = 0,j = 0,count = 0;
+    memset(sendBuf,0,sizeof(sendBuf));
+    sprintf(sendBuf,"PWD \r\n");
+    send(control_sock,sendBuf,sizeof(sendBuf),0);
+    recv(control_sock,recvBuf,195,0);
+    sscanf(recvBuf,"%d ",&state_code);
+    if(state_code != 257) {
+        memset(recvBuf,0,sizeof(recvBuf));
+        return 0;
+    }
+    memset(server_current_path,0,sizeof(server_current_path));
+    while(count < 2) {
+        if(recvBuf[i] == '"') {
+            count++;
+            i++;
+        }
+        if(count == 1) {
+            server_current_path[j] = recvBuf[i];
+            j++;
+        }
+        i++;
+    }
+    memset(recvBuf,0,sizeof(recvBuf));
+    return 1;
+}
+
 //改变服务器工作目录
 int FTPManager::ch_server_dir(string path) {
     if(path == "..") {
@@ -147,8 +176,9 @@ int FTPManager::ch_server_dir(string path) {
         else return 0;
     }
     else {
-        sprintf(sendBuf,"CWD %s\r\n",path.data());
-        if(send_order(sendBuf) == 250) return 1;
+        char order[270];
+        sprintf(order,"CWD %s\r\n",path.data());
+        if(send_order(order) == 250) return 1;
         else return 0;
     }
 }
