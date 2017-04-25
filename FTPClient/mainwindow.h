@@ -52,8 +52,10 @@ private:
     QLabel *state_info;
     QListView *locallist;
     QListView *serverlist;
+    QListView *log_message_list;
     QStandardItemModel *localstandardItemModel;
     QStandardItemModel *serverstandardItemModel;
+    QStandardItemModel *logstandardItemModel;
 private slots:
     int loginserver();
     int setactvmode();

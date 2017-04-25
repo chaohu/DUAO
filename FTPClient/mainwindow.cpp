@@ -1,4 +1,5 @@
 #include "ftpmanager.h"
+#include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 #include <QDir>
@@ -17,7 +18,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     ui->menu->addAction("主动",this,SLOT(setactvmode()));
     ui->menu->addAction("被动",this,SLOT(setpassmode()));
-    ftpmanager = new FTPManager(this);
+    ftpmanager = new FTPManager();
 
     //主题布局
     QVBoxLayout *mainlayout = new QVBoxLayout(this);
@@ -61,15 +62,15 @@ MainWindow::MainWindow(QWidget *parent) :
     bottomlayout_left->addWidget(local_dir);
     QHBoxLayout *local_path_show = new QHBoxLayout();
     QLineEdit *local_path = new QLineEdit();
-    QString current_path = QDir::currentPath();
-    local_path->setText(current_path);
+    QString current_local_path = QDir::currentPath();
+    local_path->setText(current_local_path);
     local_path_show->addWidget(local_path);
-    QPushButton *ch_dir = new QPushButton("确定");
-    local_path_show->addWidget(ch_dir);
+    QPushButton *ch_local_dir = new QPushButton("确定");
+    local_path_show->addWidget(ch_local_dir);
     bottomlayout_left->addLayout(local_path_show);
     locallist = new QListView();
     localstandardItemModel = new QStandardItemModel();
-    analysis_local_dir(current_path);
+    analysis_local_dir(current_local_path);
     connect(locallist,SIGNAL(clicked(QModelIndex)),this,SLOT(localitemClicked(QModelIndex)));
     bottomlayout_left->addWidget(locallist);
 
@@ -77,6 +78,14 @@ MainWindow::MainWindow(QWidget *parent) :
     QVBoxLayout *bottomlayout_right = new QVBoxLayout();
     QLabel *server_dir = new QLabel("服务器目录列表:");
     bottomlayout_right->addWidget(server_dir);
+
+    QHBoxLayout *server_path_show = new QHBoxLayout();
+    QLineEdit *server_path = new QLineEdit();
+    server_path_show->addWidget(server_path);
+    QPushButton *ch_server_dir = new QPushButton("确定");
+    server_path_show->addWidget(ch_server_dir);
+    bottomlayout_right->addLayout(server_path_show);
+
     serverlist = new QListView();
     serverstandardItemModel = new QStandardItemModel();
     QStandardItem *server_init_qsitem = new QStandardItem("当前未连接任何服务器");
@@ -85,13 +94,22 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(serverlist,SIGNAL(clicked(QModelIndex)),this,SLOT(serveritemClicked(QModelIndex)));
     bottomlayout_right->addWidget(serverlist);
 
+
     //底部布局
     QHBoxLayout *bottomlayout = new QHBoxLayout();
     bottomlayout->addLayout(bottomlayout_left);
     bottomlayout->addLayout(bottomlayout_right);
-
-
     mainlayout->addLayout(bottomlayout);
+
+    //日志布局
+    log_message_list = new QListView();
+    logstandardItemModel = new QStandardItemModel();
+    mainlayout->addWidget(log_message_list);
+
+    mainlayout->setStretchFactor(toplayout,1);
+    mainlayout->setStretchFactor(state_info,1);
+    mainlayout->setStretchFactor(bottomlayout,12);
+    mainlayout->setStretchFactor(log_message_list,4);
     ui->centralWidget->setLayout(mainlayout);
 }
 
@@ -106,13 +124,15 @@ int MainWindow::loginserver() {
     std::string	username = username_e->text().toStdString();
     std::string password = pwd_e->text().toStdString();
     QString port = port_e->text();
-    if(host.empty() || username.empty() || password.empty() || port.isEmpty()) {
-        qDebug("host/username/password/port不能为空");
+    if(host.empty() || port.isEmpty()) {
+        qDebug("host/port不能为空");
         state_info->setText("连接状态：连接失败");
         return 0;
     }
     else {
+        if(username.empty()) username.append("anonymous");
         if(ftpmanager->loginserver(host,username,password,port.toInt())) {
+            ftpmanager->setmode(0);
             if(ftpmanager->get_dir_list()) {
                 if(analysis_server_dir(ftpmanager->server_dir_list_info)) {
                     string temp = "连接状态：连接至";
@@ -149,14 +169,6 @@ int MainWindow::setactvmode() {
         qDebug("成功切换至主动模式");
         return 1;
     }
-//    if(ftpmanager->setactvmode()) {
-//        qDebug("成功切换至主动模式");
-//        return 1;
-//    }
-//    else {
-//        qDebug("切换主动模式失败");
-//        return 0;
-//    }
 }
 
 //设置为被动模式
@@ -170,22 +182,6 @@ int MainWindow::setpassmode() {
         qDebug("成功切换至被动模式");
         return 1;
     }
-//    int state = ftpmanager->setpassmode();
-//    if(state == 1) {
-//        state_info->setText("成功切换至被动模式");
-//        qDebug("成功切换至被动模式");
-//        return 1;
-//    }
-//    else if(state == 2) {
-//        state_info->setText("当前正在被动模式");
-//        qDebug("当前正在被动模式");
-//        return 2;
-//    }
-//    else {
-//        state_info->setText("切换被动模式失败");
-//        qDebug("切换被动模式失败");
-//        return 0;
-//    }
 }
 
 int MainWindow::analysis_local_dir(QString local_dir_path) {
@@ -258,6 +254,22 @@ int MainWindow::logoutserver() {
 
 void MainWindow::localitemClicked(QModelIndex index) {
     qDebug()<<index.data().toString();
+    char type = index.data().toString().toStdString().data()[0];
+    if(type == 'd') {
+
+    }
+    else if(type == 'f') {
+        int flag = 0;
+        if(ftpmanager->getmode()) flag = ftpmanager->file_upload_act(index.data().toString().toStdString().substr(3));
+        else flag = ftpmanager->file_upload_pas(index.data().toString().toStdString().substr(3));
+        if(flag) {
+            if(ftpmanager->get_dir_list()) {
+                if(analysis_server_dir(ftpmanager->server_dir_list_info)) {
+
+                }
+            }
+        }
+    }
 }
 
 void MainWindow::serveritemClicked(QModelIndex index) {
@@ -273,9 +285,9 @@ void MainWindow::serveritemClicked(QModelIndex index) {
         }
     }
     else if(type == 'f'){
-        if(ftpmanager->file_download(index.data().toString().toStdString().substr(3)) == 1) {
-            analysis_local_dir(QDir::currentPath());
-            return;
-        }
+        int flag = 0;
+        if(ftpmanager->getmode()) flag = ftpmanager->file_download_act(index.data().toString().toStdString().substr(3));
+        else flag = ftpmanager->file_download_pas(index.data().toString().toStdString().substr(3));
+        if(flag) analysis_local_dir(QDir::currentPath());
     }
 }
