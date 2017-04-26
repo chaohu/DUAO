@@ -26,9 +26,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    ftpmanager.cpp
+    ftpmanager.cpp \
+    newthread.cpp
 
 HEADERS  += mainwindow.h \
-    ftpmanager.h
+    ftpmanager.h \
+    newthread.h
 
 FORMS    += mainwindow.ui

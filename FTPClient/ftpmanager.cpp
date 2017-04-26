@@ -1,8 +1,8 @@
 #include "ftpmanager.h"
 #include <QDebug>
 
-FTPManager::FTPManager() {
-
+FTPManager::FTPManager(MainWindow *mainwindow) {
+    FTPManager::mainwindow = mainwindow;
 }
 
 FTPManager::~FTPManager() {
@@ -258,18 +258,9 @@ int FTPManager::file_download_act(string filename) {
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
     sscanf(recvBuf,"%d ",&state_code);
-//    string message(recvBuf);
-//    qDebug(message.substr(message.find('\n',0)+1).data());
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
-//    if(state_code1 != 150/* || state_code2 != 226*/) {
-//        return 0;
-//    }
     if(state_code != 150) return 0;
-//    if(message.find('\n',message.find('\n',0)+1) != string::npos) {
-//        qDebug("wocha");
-//        return 0;
-//    }
 
     recv(control_sock,recvBuf,195,0);
     sscanf(recvBuf,"%d ",&state_code);

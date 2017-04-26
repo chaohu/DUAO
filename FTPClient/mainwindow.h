@@ -69,6 +69,9 @@ private slots:
     int logoutserver();
     void localitemClicked(QModelIndex index);
     void serveritemClicked(QModelIndex index);
+
+public slots:
+    void flash_server_dir_list();
 };
 
 #endif // MAINWINDOW_H

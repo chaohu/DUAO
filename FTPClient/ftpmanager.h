@@ -1,5 +1,6 @@
 #ifndef FTPMANAGER_H
 #define FTPMANAGER_H
+#include "newthread.h"
 #include <winsock2.h>
 #include <string>
 using std::string;
@@ -8,6 +9,7 @@ using std::string;
 class FTPManager
 {
 private:
+    MainWindow *mainwindow;
     string host;
     int act_port_part1;
     int act_port_part2;
@@ -24,7 +26,7 @@ public:
     string server_dir_list_info;//服务器目录文件列表信息
 
 public:
-    FTPManager();
+    FTPManager(MainWindow *mainwindow);
 
     ~FTPManager();
 

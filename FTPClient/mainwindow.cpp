@@ -18,7 +18,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     ui->menu->addAction("主动",this,SLOT(setactvmode()));
     ui->menu->addAction("被动",this,SLOT(setpassmode()));
-    ftpmanager = new FTPManager();
+    ftpmanager = new FTPManager(this);
 
     //主题布局
     QVBoxLayout *mainlayout = new QVBoxLayout(this);
@@ -313,5 +313,34 @@ void MainWindow::serveritemClicked(QModelIndex index) {
         if(ftpmanager->getmode()) flag = ftpmanager->file_download_act(index.data().toString().toStdString().substr(3));
         else flag = ftpmanager->file_download_pas(index.data().toString().toStdString().substr(3));
         if(flag) analysis_local_dir(QDir::currentPath());
+    }
+}
+
+
+void MainWindow::flash_server_dir_list() {
+    if(ftpmanager->get_dir_list()) {
+        string server_dir_info = ftpmanager->server_dir_list_info;
+        dir_info_list.clear();
+        serverstandardItemModel->clear();
+        QStandardItem *server_parent_dir = new QStandardItem("d: ..");
+        serverstandardItemModel->appendRow(server_parent_dir);
+        int i = 1;	//文件目录编号从1开始，0留给".."
+        unsigned int first = 0;
+        unsigned int last = 0;
+        while((last = server_dir_info.find('\n',last)) != string::npos) {
+            dir_list temp;
+            temp.num = i;
+            sscanf(server_dir_info.substr(first,last).data(),"%s%d%s%s%d%s%s%s%s",temp.authority,&(temp.node),temp.user,temp.group,&(temp.size),temp.mouth,temp.day,temp.ntime,temp.name);
+            QString dir_name;
+            if(temp.authority[0] == 'd') dir_name = "d: ";
+            else dir_name = "f: ";
+            dir_name.append(temp.name);
+            QStandardItem *item = new QStandardItem(dir_name);
+            serverstandardItemModel->appendRow(item);
+            dir_info_list.push_back(temp);
+            first = ++last;
+            i++;
+        }
+        serverlist->setModel(serverstandardItemModel);
     }
 }
