@@ -5,6 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui
+QT	+= core gui network
 LIBS += -lws2_32
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -27,10 +28,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += main.cpp\
         mainwindow.cpp \
     ftpmanager.cpp \
-    newthread.cpp
+    downloadthread.cpp \
+    uploadthread.cpp
 
 HEADERS  += mainwindow.h \
     ftpmanager.h \
-    newthread.h
+    downloadthread.h \
+    uploadthread.h
 
 FORMS    += mainwindow.ui

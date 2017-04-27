@@ -2,11 +2,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <QDir>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QPushButton>
-
 #include <QDebug>
 
 FTPManager *ftpmanager;
@@ -16,11 +11,24 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    ui->menu->addAction("主动",this,SLOT(setactvmode()));
-    ui->menu->addAction("被动",this,SLOT(setpassmode()));
+    ui->mode->addAction("主动",this,SLOT(setactvmode()));
+    ui->mode->addAction("被动",this,SLOT(setpassmode()));
+    ui->state->addAction("上传下载列表",this,SLOT(showprogressbar()));
     ftpmanager = new FTPManager(this);
 
-    //主题布局
+    //上传下载停靠窗口
+    progressbar_list = new QDockWidget(tr("上传下载列表"),this);
+    progressbar_list->setFeatures(QDockWidget::DockWidgetClosable);
+    progressbar_list->setAllowedAreas(Qt::RightDockWidgetArea);
+    progressbar_layout = new QVBoxLayout();
+    QWidget *in_progressbar_list= new QWidget();
+    in_progressbar_list->setLayout(progressbar_layout);
+    progressbar_list->setWidget(in_progressbar_list);
+    addDockWidget(Qt::RightDockWidgetArea,progressbar_list);
+    progressbar_list->setVisible(false);
+
+
+    //主体布局
     QVBoxLayout *mainlayout = new QVBoxLayout(this);
 
     //顶部布局
@@ -189,6 +197,12 @@ int MainWindow::setpassmode() {
     }
 }
 
+//显示上传下载进度条
+void MainWindow::showprogressbar() {
+    qDebug("显示进度条");
+    progressbar_list->setVisible(true);
+}
+
 void MainWindow::f_ch_local_dir() {
     qDebug("改变本地目录");
 }
@@ -282,8 +296,8 @@ void MainWindow::localitemClicked(QModelIndex index) {
     }
     else if(type == 'f') {
         int flag = 0;
-        if(ftpmanager->getmode()) flag = ftpmanager->file_upload_act(index.data().toString().toStdString().substr(3));
-        else flag = ftpmanager->file_upload_pas(index.data().toString().toStdString().substr(3));
+        if(ftpmanager->getmode()) flag = ftpmanager->file_upload_act(index.data().toString().mid(3));
+        else flag = ftpmanager->file_upload_pas(index.data().toString().mid(3));
         if(flag) {
             if(ftpmanager->get_dir_list()) {
                 if(analysis_server_dir(ftpmanager->server_dir_list_info)) {
@@ -309,13 +323,29 @@ void MainWindow::serveritemClicked(QModelIndex index) {
         }
     }
     else if(type == 'f'){
-        int flag = 0;
-        if(ftpmanager->getmode()) flag = ftpmanager->file_download_act(index.data().toString().toStdString().substr(3));
-        else flag = ftpmanager->file_download_pas(index.data().toString().toStdString().substr(3));
-        if(flag) analysis_local_dir(QDir::currentPath());
+        if(ftpmanager->getmode()) ftpmanager->file_download_act(index.data().toString().mid(3));
+        else ftpmanager->file_download_pas(index.data().toString().mid(3));
     }
 }
 
+
+void MainWindow::flash_local_dir_list() {
+    localstandardItemModel->clear();
+    QDir dir(QDir::currentPath());
+    dir.setFilter(QDir::AllEntries|QDir::NoDot);
+    QFileInfoList local_dir_list = dir.entryInfoList();
+
+    for(int i = 0;i < local_dir_list.size();i++) {
+        qDebug() << local_dir_list.at(i).fileName();
+        QString dir_name;
+        if(local_dir_list.at(i).isDir()) dir_name = "d: ";
+        else dir_name = "f: ";
+        dir_name.append(local_dir_list.at(i).fileName().toStdString().data());
+        QStandardItem *temp = new QStandardItem(dir_name);
+        localstandardItemModel->appendRow(temp);
+    }
+    locallist->setModel(localstandardItemModel);
+}
 
 void MainWindow::flash_server_dir_list() {
     if(ftpmanager->get_dir_list()) {
@@ -343,4 +373,20 @@ void MainWindow::flash_server_dir_list() {
         }
         serverlist->setModel(serverstandardItemModel);
     }
+}
+
+void MainWindow::add_progressbar(int num) {
+    qDebug()<<(new QString("progressbar"));
+    QProgressBar *_progressbar = new QProgressBar();
+    _progressbar->setRange(0,100);
+    _progressbar->setValue(1);
+    while(progressbar.size()<(unsigned)num+1) progressbar.push_back(NULL);
+    progressbar[num] = _progressbar;
+    progressbar_layout->addWidget(_progressbar);
+}
+
+
+void MainWindow::flash_bar(int num, unsigned value) {
+    qDebug("flash");
+    progressbar[num]->setValue(value);
 }

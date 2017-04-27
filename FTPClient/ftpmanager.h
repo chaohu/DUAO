@@ -1,6 +1,7 @@
 #ifndef FTPMANAGER_H
 #define FTPMANAGER_H
-#include "newthread.h"
+#include "downloadthread.h"
+#include "uploadthread.h"
 #include <winsock2.h>
 #include <string>
 using std::string;
@@ -11,6 +12,10 @@ class FTPManager
 private:
     MainWindow *mainwindow;
     string host;
+    int local_ip_part1;
+    int local_ip_part2;
+    int local_ip_part3;
+    int local_ip_part4;
     int act_port_part1;
     int act_port_part2;
     int mode_flag;	//主被动模式标记：0被动，1主动
@@ -41,10 +46,10 @@ public:
     int get_server_current_path();//获取服务器当前工作目录
     int ch_server_dir(string path);//改变服务器工作目录
     int get_dir_list();//获取当前目录文件列表
-    int file_download_act(string filename);//主动模式从服务器下载文件
-    int file_download_pas(string filename);//被动模式从服务器下载文件
-    int file_upload_act(string filename);//主动模式上传文件到服务器
-    int file_upload_pas(string filename);//被动模式上传文件到服务器
+    int file_download_act(QString filename);//主动模式从服务器下载文件
+    int file_download_pas(QString filename);//被动模式从服务器下载文件
+    int file_upload_act(QString filename);//主动模式上传文件到服务器
+    int file_upload_pas(QString filename);//被动模式上传文件到服务器
     int writetofile(SOCKET _socket,const char *filename);//将文件写到本地磁盘
     int readfromfile(SOCKET _socket,const char *filename);//从本地磁盘读取文件
     int logoutserver();//断开服务器连接

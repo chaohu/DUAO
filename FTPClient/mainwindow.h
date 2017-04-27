@@ -7,13 +7,22 @@
 #include <vector>
 using namespace std;
 
+#include <QDockWidget>
 #include <QLineEdit>
 #include <QLabel>
+#include <QProgressBar>
+#include <QListWidget>
 
 #include <QListView>
 #include <QStandardItem>
 #include <QStandardItemModel>
 #include <QModelIndex>
+
+#include <QDir>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QPushButton>
+
 
 namespace Ui {
 class MainWindow;
@@ -58,10 +67,15 @@ private:
     QStandardItemModel *localstandardItemModel;
     QStandardItemModel *serverstandardItemModel;
     QStandardItemModel *logstandardItemModel;
+    QDockWidget *progressbar_list;
+    QVBoxLayout *progressbar_layout;
+    vector<QProgressBar*> progressbar;
+
 private slots:
     int loginserver();
     int setactvmode();
     int setpassmode();
+    void showprogressbar();
     void f_ch_local_dir();
     void f_ch_server_dir();
     int analysis_local_dir(QString local_dir_path);
@@ -71,7 +85,10 @@ private slots:
     void serveritemClicked(QModelIndex index);
 
 public slots:
+    void flash_local_dir_list();
     void flash_server_dir_list();
+    void add_progressbar(int num);
+    void flash_bar(int num,unsigned value);
 };
 
 #endif // MAINWINDOW_H
