@@ -1,14 +1,15 @@
 #ifndef FTPMANAGER_H
 #define FTPMANAGER_H
-#include "downloadthread.h"
-#include "uploadthread.h"
+#include "mainwindow.h"
 #include <winsock2.h>
 #include <string>
+#include <QMutex>
 using std::string;
 
 
 class FTPManager
 {
+
 private:
     MainWindow *mainwindow;
     string host;
@@ -53,12 +54,15 @@ public:
     int writetofile(SOCKET _socket,const char *filename);//将文件写到本地磁盘
     int readfromfile(SOCKET _socket,const char *filename);//从本地磁盘读取文件
     int logoutserver();//断开服务器连接
+    int cont_download(QString filename,int len);//断点续传下载
+    int cont_upload(QString filename,int len);//断点续传上传
 
     //辅助函数
     int getport(const char *recvBuf);
     int getmode();//获取当前模式
     int setmode(int mode_flag);//设置当前模式
     SOCKET getdatasock();//获取数据socket
+    SOCKET getcontrolsock();//获取控制socket
 };
 
 #endif // FTPMANAGER_H

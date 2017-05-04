@@ -13,7 +13,7 @@ class DownloadThread : public QThread
     Q_OBJECT
 
 signals:
-    void filedownload();
+    void filedownload(bool check);
 
 private:
     MainWindow *mainwindow;
@@ -24,29 +24,6 @@ private:
 public:
     DownloadThread(MainWindow *mainwindow,SOCKET data_sock,QString filename,unsigned size_all);
     ~DownloadThread();
-
-    void run();
-
-};
-
-
-class DownloadBar : public QThread
-{
-    Q_OBJECT
-
-signals:
-    void add_bar(int num);
-    void flash_bar(int num,unsigned value);
-
-private:
-    MainWindow *mainwindow;
-    QProgressBar *download_bar;
-    unsigned size_all;
-    int locate;
-
-public:
-    DownloadBar(MainWindow *mainwindow,unsigned size_all,int locate);
-    ~DownloadBar();
 
     void run();
 

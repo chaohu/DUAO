@@ -29,11 +29,14 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     ftpmanager.cpp \
     downloadthread.cpp \
-    uploadthread.cpp
+    uploadthread.cpp \
+    duprogressbar.cpp
 
 HEADERS  += mainwindow.h \
     ftpmanager.h \
     downloadthread.h \
-    uploadthread.h
+    uploadthread.h \
+    duprogressbar.h \
+    heartconn.h
 
 FORMS    += mainwindow.ui

@@ -4,6 +4,7 @@
 #include <QThread>
 #include <winsock2.h>
 #include <QDebug>
+#include <QFile>
 
 class UploadThread : public QThread
 {
@@ -16,9 +17,10 @@ private:
     MainWindow *mainwindow;
     SOCKET data_sock;
     QString filename;
+    long long offset;
 
 public:
-    UploadThread(MainWindow *mainwindow,SOCKET data_sock,QString filename);
+    UploadThread(MainWindow *mainwindow,SOCKET data_sock,QString filename,long long offset);
     ~UploadThread();
 
     void run();

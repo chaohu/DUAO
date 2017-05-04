@@ -22,6 +22,7 @@ using namespace std;
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QMessageBox>
 
 
 namespace Ui {
@@ -41,9 +42,17 @@ struct dir_list {
     char name[50];
 };
 
+struct du_progressbar_layout {
+    QProgressBar *progressbar;
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
+
+protected:
+    void dragEnterEvent(QDragEnterEvent *event);
+    void dropEvent(QDropEvent *event);
 
 public:
     explicit MainWindow(QWidget *parent = 0);
@@ -68,6 +77,7 @@ private:
     QStandardItemModel *serverstandardItemModel;
     QStandardItemModel *logstandardItemModel;
     QDockWidget *progressbar_list;
+    QVBoxLayout *_progressbar_layout;
     QVBoxLayout *progressbar_layout;
     vector<QProgressBar*> progressbar;
 
@@ -76,16 +86,20 @@ private slots:
     int setactvmode();
     int setpassmode();
     void showprogressbar();
-    void f_ch_local_dir();
+    void f_ch_local_dir(QString dir_path);
     void f_ch_server_dir();
     int analysis_local_dir(QString local_dir_path);
     int analysis_server_dir(string server_dir_info);
     int logoutserver();
     void localitemClicked(QModelIndex index);
     void serveritemClicked(QModelIndex index);
+    void clear_downup_list();
+
+public:
+    void add_log(QString log_info);
 
 public slots:
-    void flash_local_dir_list();
+    void flash_local_dir_list(bool check);
     void flash_server_dir_list();
     void add_progressbar(int num);
     void flash_bar(int num,unsigned value);

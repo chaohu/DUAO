@@ -1,8 +1,17 @@
-#include "ftpmanager.h"
-#include "mainwindow.h"
+#include "heartconn.h"
 #include "ui_mainwindow.h"
 
 #include <QDebug>
+#include <QDragEnterEvent>
+#include <QDrag>
+#include <QDropEvent>
+#include <QMimeData>
+
+extern QList<unsigned> size_now_no;
+extern QMutex mutex_process;
+
+QMutex mutex_exit;
+bool conn_exit;
 
 FTPManager *ftpmanager;
 
@@ -15,6 +24,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->mode->addAction("被动",this,SLOT(setpassmode()));
     ui->state->addAction("上传下载列表",this,SLOT(showprogressbar()));
     ftpmanager = new FTPManager(this);
+    setAcceptDrops(true);
 
     //上传下载停靠窗口
     progressbar_list = new QDockWidget(tr("上传下载列表"),this);
@@ -22,11 +32,16 @@ MainWindow::MainWindow(QWidget *parent) :
     progressbar_list->setAllowedAreas(Qt::RightDockWidgetArea);
     progressbar_layout = new QVBoxLayout();
     QWidget *in_progressbar_list= new QWidget();
-    in_progressbar_list->setLayout(progressbar_layout);
+    _progressbar_layout = new QVBoxLayout();
+    QPushButton *clear_du_list = new QPushButton("清除列表");
+    connect(clear_du_list,SIGNAL(clicked(bool)),this,SLOT(clear_downup_list()));
+    _progressbar_layout->setMenuBar(clear_du_list);
+    _progressbar_layout->addLayout(progressbar_layout);
+    _progressbar_layout->addStretch();
+    in_progressbar_list->setLayout(_progressbar_layout);
     progressbar_list->setWidget(in_progressbar_list);
     addDockWidget(Qt::RightDockWidgetArea,progressbar_list);
     progressbar_list->setVisible(false);
-
 
     //主体布局
     QVBoxLayout *mainlayout = new QVBoxLayout(this);
@@ -142,6 +157,8 @@ int MainWindow::loginserver() {
     else {
         if(username.empty()) username.append("anonymous");
         if(ftpmanager->loginserver(host,username,password,port.toInt())) {
+            HeartConn *heartconn = new HeartConn(this,ftpmanager,ftpmanager->getcontrolsock(),host,username,password,port.toInt());
+            heartconn->start();
             ftpmanager->setmode(0);
             if(ftpmanager->get_dir_list()) {
                 if(analysis_server_dir(ftpmanager->server_dir_list_info)) {
@@ -203,7 +220,9 @@ void MainWindow::showprogressbar() {
     progressbar_list->setVisible(true);
 }
 
-void MainWindow::f_ch_local_dir() {
+void MainWindow::f_ch_local_dir(QString dir_path) {
+    QDir::setCurrent(dir_path);
+    flash_local_dir_list(true);
     qDebug("改变本地目录");
 }
 
@@ -277,6 +296,11 @@ int MainWindow::logoutserver() {
         serverlist->setModel(serverstandardItemModel);
         state_info->setText("连接状态：已断开");
         server_path->setText("");
+        logstandardItemModel->clear();
+        log_message_list->setModel(logstandardItemModel);
+        mutex_exit.lock();
+        conn_exit = true;
+        mutex_exit.unlock();
         return 0;
     }
     else {
@@ -329,7 +353,14 @@ void MainWindow::serveritemClicked(QModelIndex index) {
 }
 
 
-void MainWindow::flash_local_dir_list() {
+void MainWindow::flash_local_dir_list(bool check) {
+    if(check) {
+        QMessageBox::warning(this,tr("提示"),tr("下载文件校验正确！"),QMessageBox::Yes);
+    }
+    else {
+        QMessageBox::warning(this,tr("提示！"),tr("下载文件校验失败！"),QMessageBox::Yes);
+    }
+
     localstandardItemModel->clear();
     QDir dir(QDir::currentPath());
     dir.setFilter(QDir::AllEntries|QDir::NoDot);
@@ -375,6 +406,8 @@ void MainWindow::flash_server_dir_list() {
     }
 }
 
+
+//添加上传下载进度条
 void MainWindow::add_progressbar(int num) {
     qDebug()<<(new QString("progressbar"));
     QProgressBar *_progressbar = new QProgressBar();
@@ -386,7 +419,94 @@ void MainWindow::add_progressbar(int num) {
 }
 
 
+//刷新上传下载进度条
 void MainWindow::flash_bar(int num, unsigned value) {
     qDebug("flash");
     progressbar[num]->setValue(value);
+}
+
+
+//清空下载上传进度条
+void MainWindow::clear_downup_list() {
+    for(int i = 0;i < (int)progressbar.size();i++) {
+        progressbar_layout->removeWidget(progressbar[i]);
+        delete(progressbar[i]);
+    }
+    progressbar.clear();
+    mutex_process.lock();
+    size_now_no.clear();
+    mutex_process.unlock();
+}
+
+
+//添加log信息
+void MainWindow::add_log(QString log_info) {
+    QStandardItem *item = new QStandardItem(log_info);
+    logstandardItemModel->appendRow(item);
+    log_message_list->setModel(logstandardItemModel);
+    log_message_list->scrollToBottom();
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
+    //如果为文件支持拖放
+    if(event->mimeData()->hasFormat("text/uri-list")) event->acceptProposedAction();
+}
+
+void MainWindow::dropEvent(QDropEvent *event) {
+    QList<QUrl> urls = event->mimeData()->urls();
+    if(urls.isEmpty()) return;
+    else {
+        foreach (QUrl url, urls) {
+            int site = url.toLocalFile().lastIndexOf('/');
+            char hehe[10];
+            itoa(site,hehe,10);
+            qDebug(hehe);
+            f_ch_local_dir(url.toLocalFile().left(site));
+            if(ftpmanager->getmode()) ftpmanager->file_upload_act(url.toLocalFile().mid(site+1));
+            else ftpmanager->file_upload_pas(url.toLocalFile().mid(site+1));
+            flash_server_dir_list();
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+//断开重连代码
+HeartConn::HeartConn(MainWindow *mainwindow,FTPManager *ftpmanager,SOCKET control_sock, string host, string username, string password, int port) {
+    HeartConn::mainwindow = mainwindow;
+    HeartConn::ftpmanager = ftpmanager;
+    HeartConn::control_sock = control_sock;
+    HeartConn::host = host;
+    HeartConn::username = username;
+    HeartConn::password = password;
+    HeartConn::port = port;
+    connect(this,SIGNAL(flash_server_dir()),mainwindow,SLOT(flash_server_dir_list()));
+}
+
+HeartConn::~HeartConn() {
+
+}
+
+void HeartConn::run() {
+    char temp[200];
+    bool exit = false;
+    while(true) {
+        mutex_exit.lock();
+        exit = conn_exit;
+        mutex_exit.unlock();
+        if(exit) break;
+        else {
+            send(control_sock,"Type I\r\n",15,0);
+            if(recv(control_sock,temp,20,0) <= 0) {
+                if(ftpmanager->loginserver(host,username,password,port)) emit flash_server_dir();
+            }
+        }
+        msleep(500);
+    }
 }

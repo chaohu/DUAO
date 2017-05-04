@@ -1,11 +1,17 @@
 #include "ftpmanager.h"
+#include "downloadthread.h"
+#include "uploadthread.h"
+#include "heartconn.h"
 #include <QtNetwork/QHostInfo>
 #include <QtNetwork/QHostAddress>
 #include <QDebug>
-#include <QMutex>
+#include <QSemaphore>
 
-vector<unsigned> size_now_no;
+QList<unsigned> size_now_no;
 QMutex mutex_process;
+
+QSemaphore bar_list_queen(3);
+HeartConn *heartconn;
 
 FTPManager::FTPManager(MainWindow *mainwindow) {
     FTPManager::mainwindow = mainwindow;
@@ -33,6 +39,7 @@ int FTPManager::loginserver(const std::string host,const std::string username,co
 
     recv(control_sock,recvBuf,195,0);
     qDebug("链接命令端口返回消息:%s",recvBuf);
+    mainwindow->add_log(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
 
     //登陆到服务器
@@ -71,6 +78,7 @@ int FTPManager::send_order(string order) {
     send(control_sock,order.data(),strlen(order.data()),0);
     recv(control_sock,recv_message,195,0);
     qDebug("%s",recv_message);
+    mainwindow->add_log(recvBuf);
     sscanf(recv_message,"%d ",&state_code);
     return state_code;
 }
@@ -146,6 +154,7 @@ int FTPManager::setpassmode() {
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
     qDebug("被动态返回信息:%s",recvBuf);
+    mainwindow->add_log(recvBuf);
     sscanf(recvBuf,"%d ",&state_code);
     if(state_code != 227) {
         memset(recvBuf,0,sizeof(recvBuf));
@@ -165,6 +174,7 @@ int FTPManager::get_server_current_path() {
     sprintf(sendBuf,"PWD \r\n");
     send(control_sock,sendBuf,sizeof(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
     sscanf(recvBuf,"%d ",&state_code);
     if(state_code != 257) {
         memset(recvBuf,0,sizeof(recvBuf));
@@ -221,6 +231,7 @@ int FTPManager::get_dir_list() {
     if(send_order("LIST \r\n") != 150) return 0;
     recv(control_sock,recvBuf,195,0);
     qDebug(recvBuf);
+    mainwindow->add_log(recvBuf);
     sscanf(recvBuf,"%d ",&state_code);
     memset(recvBuf,0,sizeof(recvBuf));
     if(state_code != 226) return 0;
@@ -244,22 +255,30 @@ int FTPManager::get_dir_list() {
 
 //主动模式下载
 int FTPManager::file_download_act(QString filename) {
+    QFile file(filename);
     int state_code;
     unsigned size_all;
 
     memset(sendBuf,0,sizeof(sendBuf));
-    sprintf(sendBuf,"SIZE %s\r\n",filename.toLatin1().data());
+    sprintf(sendBuf,"SIZE %s\r\n",filename.toLocal8Bit().data());
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
     sscanf(recvBuf,"%d %ud",&state_code,&size_all);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
     if(state_code != 213) return 0;
 
+    if(file.size() == size_all) return 1;
+
+    sprintf(sendBuf,"REST %lld\r\n",file.size());
+    send_order(sendBuf);
+
     memset(sendBuf,0,sizeof(sendBuf));
     sprintf(sendBuf,"TYPE I\r\n");
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
     sscanf(recvBuf,"%d ",&state_code);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
@@ -268,24 +287,27 @@ int FTPManager::file_download_act(QString filename) {
     if(!setactvmode()) return 0;
 
     memset(sendBuf,0,sizeof(sendBuf));
-    sprintf(sendBuf,"PORT %d,%d,%d,%d,%d,%d\r\n",local_ip_part1,local_ip_part2,local_ip_part3,local_ip_part4,act_port_part1,act_port_part2);
+    sprintf(sendBuf,"PORT 127,0,0,1,%d,%d\r\n",/*local_ip_part1,local_ip_part2,local_ip_part3,local_ip_part4,*/act_port_part1,act_port_part2);
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
     sscanf(recvBuf,"%d ",&state_code);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
     if(state_code != 200) return 0;
 
     memset(sendBuf,0,sizeof(sendBuf));
-    sprintf(sendBuf,"RETR %s\r\n",filename.toLatin1().data());
+    sprintf(sendBuf,"RETR %s\r\n",filename.toLocal8Bit().data());
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
     sscanf(recvBuf,"%d ",&state_code);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
     if(state_code != 150) return 0;
 
     recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
     sscanf(recvBuf,"%d ",&state_code);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
@@ -307,23 +329,34 @@ int FTPManager::file_download_act(QString filename) {
 
 //被动模式从服务器下载
 int FTPManager::file_download_pas(QString filename) {
+    QFile file(filename);
+    char hehe[10];
+    itoa(file.size(),hehe,10);
+    qDebug(hehe);
     int state_code;
     unsigned size_all;
 
     qDebug() << filename;
     memset(sendBuf,0,sizeof(sendBuf));
-    sprintf(sendBuf,"SIZE %s\r\n",filename.toLatin1().data());
+    sprintf(sendBuf,"SIZE %s\r\n",filename.toLocal8Bit().data());
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
     sscanf(recvBuf,"%d %ud",&state_code,&size_all);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
     if(state_code != 213) return 0;
 
+    if(file.size() == size_all) return 1;
+
+    sprintf(sendBuf,"REST %lld\r\n",file.size());
+    send_order(sendBuf);
+
     memset(sendBuf,0,sizeof(sendBuf));
     sprintf(sendBuf,"TYPE I\r\n");
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
     sscanf(recvBuf,"%d",&state_code);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
@@ -332,9 +365,10 @@ int FTPManager::file_download_pas(QString filename) {
     if(!setpassmode()) return 0;
 
     memset(sendBuf,0,sizeof(sendBuf));
-    sprintf(sendBuf,"RETR %s\r\n",filename.toLatin1().data());
+    sprintf(sendBuf,"RETR %s\r\n",filename.toLocal8Bit().data());
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
     sscanf(recvBuf,"%d",&state_code);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
@@ -346,6 +380,7 @@ int FTPManager::file_download_pas(QString filename) {
     downloadthread->start();
 
     recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
 
@@ -354,17 +389,33 @@ int FTPManager::file_download_pas(QString filename) {
 
 //主动模式上传文件至服务器
 int FTPManager::file_upload_act(QString filename) {
+    QFile file(filename);
     int state_code = -1;
+    long long offset = 0;
+    int size_all;
+
+    memset(sendBuf,0,sizeof(sendBuf));
+    sprintf(sendBuf,"SIZE %s\r\n",filename.toLocal8Bit().data());
+    send(control_sock,sendBuf,strlen(sendBuf),0);
+    recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
+    sscanf(recvBuf,"%d %ud",&state_code,&size_all);
+    qDebug(recvBuf);
+    memset(recvBuf,0,sizeof(recvBuf));
+    if(state_code != 213) offset = 0;
+    else if(size_all == file.size()) return 1;
+    else offset = (long long)size_all;
+
     if(send_order("TYPE I\r\n") != 200) return 0;
 
     if(!setactvmode()) return 0;
 
     memset(sendBuf,0,sizeof(sendBuf));
-    sprintf(sendBuf,"PORT %d,%d,%d,%d,%d,%d\r\n",local_ip_part1,local_ip_part2,local_ip_part3,local_ip_part4,act_port_part1,act_port_part2);
+    sprintf(sendBuf,"PORT 127,0,0,1,%d,%d\r\n",/*local_ip_part1,local_ip_part2,local_ip_part3,local_ip_part4,*/act_port_part1,act_port_part2);
     if(send_order(sendBuf) != 200) return 0;
 
     memset(sendBuf,0,sizeof(sendBuf));
-    sprintf(sendBuf,"STOR %s\r\n",filename.toLatin1().data());
+    sprintf(sendBuf,"APPE %s\r\n",filename.toLocal8Bit().data());
     if(send_order(sendBuf) != 150) return 0;
 
     SOCKET file_sock = socket(AF_INET,SOCK_STREAM,0);
@@ -373,13 +424,14 @@ int FTPManager::file_upload_act(QString filename) {
 //    flag = readfromfile(file_socket,filename.data());
 //    closesocket(file_socket);
 
-    UploadThread *uploadtheread = new UploadThread(mainwindow,file_sock,filename);
+    UploadThread *uploadtheread = new UploadThread(mainwindow,file_sock,filename,offset);
     uploadtheread->start();
     closesocket(data_sock);
 
 
 
     recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
     sscanf(recvBuf,"%d ",&state_code);
     qDebug(recvBuf);
     memset(recvBuf,0,sizeof(recvBuf));
@@ -390,43 +442,39 @@ int FTPManager::file_upload_act(QString filename) {
 
 //被动模式上传文件至服务器
 int FTPManager::file_upload_pas(QString filename) {
+    QFile file(filename);
+    int state_code = -1;
+    long long offset = 0;
+    int size_all;
+
+    memset(sendBuf,0,sizeof(sendBuf));
+    sprintf(sendBuf,"SIZE %s\r\n",filename.toLocal8Bit().data());
+    send(control_sock,sendBuf,strlen(sendBuf),0);
+    recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
+    sscanf(recvBuf,"%d %ud",&state_code,&size_all);
+    qDebug(recvBuf);
+    memset(recvBuf,0,sizeof(recvBuf));
+    if(state_code != 213) offset = 0;
+    else if(size_all == file.size()) return 1;
+    else offset = (long long)size_all;
+
+
     if(send_order("TYPE I\r\n") != 200) return 0;
     if(!setpassmode()) return 0;
     memset(sendBuf,0,sizeof(sendBuf));
-    sprintf(sendBuf,"STOR %s\r\n",filename.toLatin1().data());
+    sprintf(sendBuf,"APPE %s\r\n",filename.toLocal8Bit().data());
     if(send_order(sendBuf) != 150) return 0;
 
 //    flag = readfromfile(data_sock,filename.data());
 //    closesocket(data_sock);
 
-    UploadThread *uploadthread = new UploadThread(mainwindow,data_sock,filename);
+    UploadThread *uploadthread = new UploadThread(mainwindow,data_sock,filename,offset);
     uploadthread->start();
 
     return 1;
 }
 
-
-//客户端创建文件
-int FTPManager::writetofile(SOCKET _socket,const char *filename) {
-    FILE *file;
-    qDebug(filename);
-    QString filename_gbk(filename);
-    if((file = fopen(filename_gbk.toLocal8Bit(),"wb")) == NULL) {
-        qDebug("创建文件失败");
-        return 0;
-    }
-    else {
-        qDebug("创建文件成功");
-        char recv_content[514];
-        int size = 0;
-        while((size = recv(_socket,recv_content,512,0)) > 0) {
-            fwrite(recv_content,1,size,file);
-            memset(recv_content,0,sizeof(recv_content));
-        }
-        fclose(file);
-        return 1;
-    }
-}
 
 //客户端读取文件
 int FTPManager::readfromfile(SOCKET _socket, const char *filename) {
@@ -501,4 +549,18 @@ int FTPManager::setmode(int mode_flag) {
 SOCKET FTPManager::getdatasock() {
     mode_flag = 0;
     return data_sock;
+}
+
+SOCKET FTPManager::getcontrolsock() {
+    return control_sock;
+}
+
+//断点续传下载被动
+int FTPManager::cont_download(QString filename, int len) {
+    return 1;
+}
+
+//断点续传上传
+int FTPManager::cont_upload(QString filename, int len) {
+    return 1;
 }
