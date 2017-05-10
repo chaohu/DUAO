@@ -42,7 +42,8 @@ struct dir_list {
     char name[50];
 };
 
-struct du_progressbar_layout {
+struct du_progressbar{
+    QLabel *filename;
     QProgressBar *progressbar;
 };
 
@@ -79,13 +80,14 @@ private:
     QDockWidget *progressbar_list;
     QVBoxLayout *_progressbar_layout;
     QVBoxLayout *progressbar_layout;
-    vector<QProgressBar*> progressbar;
+    vector<du_progressbar *> progressbar;
 
 private slots:
     int loginserver();
     int setactvmode();
     int setpassmode();
     void showprogressbar();
+    void f_ch_local_dir();
     void f_ch_local_dir(QString dir_path);
     void f_ch_server_dir();
     int analysis_local_dir(QString local_dir_path);
@@ -99,9 +101,12 @@ public:
     void add_log(QString log_info);
 
 public slots:
-    void flash_local_dir_list(bool check);
+    void check_file(bool check);
+    void file_uploaded(QString filename);
+    void file_downloaded(QString filename);
+    void flash_local_dir_list();
     void flash_server_dir_list();
-    void add_progressbar(int num);
+    void add_progressbar(int num,QString filename);
     void flash_bar(int num,unsigned value);
 };
 

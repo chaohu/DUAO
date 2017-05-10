@@ -16,7 +16,8 @@ DownloadThread::DownloadThread(MainWindow *mainwindow,SOCKET data_sock,QString f
     DownloadThread::data_sock = data_sock;
     DownloadThread::filename = filename;
     DownloadThread::size_all = size_all;
-    connect(this,SIGNAL(filedownload(bool)),mainwindow,SLOT(flash_local_dir_list(bool)));
+    connect(this,SIGNAL(check_file(bool)),mainwindow,SLOT(check_file(bool)));
+    connect(this,SIGNAL(filedownload(QString)),mainwindow,SLOT(file_downloaded(QString)));
     connect(this,SIGNAL(finished()),this,SLOT(deleteLater()));
 }
 
@@ -43,7 +44,7 @@ void DownloadThread::run() {
         itoa(locate,hehe,10);
         qDebug(hehe);
         char recv_content[514];
-        DUProgressBar *duprogressbar = new DUProgressBar(mainwindow,size_all,locate-1);
+        DUProgressBar *duprogressbar = new DUProgressBar(mainwindow,filename,size_all,locate-1);
         duprogressbar->start();
         while((size = recv(data_sock,recv_content,512,0)) > 0) {
             file.write(recv_content,size);
@@ -59,8 +60,14 @@ void DownloadThread::run() {
 //        mutex_process.unlock();
         file.close();
         closesocket(data_sock);
-        if(file.size() == size_all) emit filedownload(true);
-        else emit filedownload(false);
+
+//        recv(ftpmanager->getcontrolsock(),recv_content,195,0);
+//        mainwindow->add_log(recv_content);
+//        memset(recv_content,0,sizeof(recv_content));
+
+        if(file.size() == size_all) emit check_file(true);
+        else emit check_file(false);
+        emit filedownload(filename);
         bar_list_queen.release();
     }
 }

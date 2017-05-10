@@ -219,7 +219,7 @@ int FTPManager::get_dir_list() {
     if(mode_flag) {
         if(!setactvmode()) return 0;
         memset(sendBuf,0,sizeof(sendBuf));
-        sprintf(sendBuf,"PORT %d,%d,%d,%d,%d,%d\r\n",local_ip_part1,local_ip_part2,local_ip_part3,local_ip_part4,act_port_part1,act_port_part2);
+        sprintf(sendBuf,"PORT %d,%d,%d,%d,%d,%d\r\n",127,0,0,1,act_port_part1,act_port_part2);
         if(send_order(sendBuf) != 200) return 0;
     }
     else {
@@ -287,7 +287,7 @@ int FTPManager::file_download_act(QString filename) {
     if(!setactvmode()) return 0;
 
     memset(sendBuf,0,sizeof(sendBuf));
-    sprintf(sendBuf,"PORT 127,0,0,1,%d,%d\r\n",/*local_ip_part1,local_ip_part2,local_ip_part3,local_ip_part4,*/act_port_part1,act_port_part2);
+    sprintf(sendBuf,"PORT %d,%d,%d,%d,%d,%d\r\n",127,0,0,1,act_port_part1,act_port_part2);
     send(control_sock,sendBuf,strlen(sendBuf),0);
     recv(control_sock,recvBuf,195,0);
     mainwindow->add_log(recvBuf);
@@ -374,15 +374,16 @@ int FTPManager::file_download_pas(QString filename) {
     memset(recvBuf,0,sizeof(recvBuf));
     if(state_code != 150) return 0;
 
+    recv(control_sock,recvBuf,195,0);
+    mainwindow->add_log(recvBuf);
+    qDebug(recvBuf);
+    memset(recvBuf,0,sizeof(recvBuf));
+
 //    flag = writetofile(data_sock,filename.data());
 //    closesocket(data_sock);
     DownloadThread *downloadthread = new DownloadThread(mainwindow,data_sock,filename,size_all);
     downloadthread->start();
 
-    recv(control_sock,recvBuf,195,0);
-    mainwindow->add_log(recvBuf);
-    qDebug(recvBuf);
-    memset(recvBuf,0,sizeof(recvBuf));
 
     return 1;
 }
@@ -411,7 +412,7 @@ int FTPManager::file_upload_act(QString filename) {
     if(!setactvmode()) return 0;
 
     memset(sendBuf,0,sizeof(sendBuf));
-    sprintf(sendBuf,"PORT 127,0,0,1,%d,%d\r\n",/*local_ip_part1,local_ip_part2,local_ip_part3,local_ip_part4,*/act_port_part1,act_port_part2);
+    sprintf(sendBuf,"PORT %d,%d,%d,%d,%d,%d\r\n",127,0,0,1,act_port_part1,act_port_part2);
     if(send_order(sendBuf) != 200) return 0;
 
     memset(sendBuf,0,sizeof(sendBuf));
@@ -426,16 +427,15 @@ int FTPManager::file_upload_act(QString filename) {
 
     UploadThread *uploadtheread = new UploadThread(mainwindow,file_sock,filename,offset);
     uploadtheread->start();
+
     closesocket(data_sock);
 
-
-
-    recv(control_sock,recvBuf,195,0);
-    mainwindow->add_log(recvBuf);
-    sscanf(recvBuf,"%d ",&state_code);
-    qDebug(recvBuf);
-    memset(recvBuf,0,sizeof(recvBuf));
-    if(state_code != 226) return 0;
+//    recv(control_sock,recvBuf,195,0);
+//    mainwindow->add_log(recvBuf);
+//    sscanf(recvBuf,"%d ",&state_code);
+//    qDebug(recvBuf);
+//    memset(recvBuf,0,sizeof(recvBuf));
+//    if(state_code != 226) return 0;
     return 1;
 }
 
@@ -465,9 +465,6 @@ int FTPManager::file_upload_pas(QString filename) {
     memset(sendBuf,0,sizeof(sendBuf));
     sprintf(sendBuf,"APPE %s\r\n",filename.toLocal8Bit().data());
     if(send_order(sendBuf) != 150) return 0;
-
-//    flag = readfromfile(data_sock,filename.data());
-//    closesocket(data_sock);
 
     UploadThread *uploadthread = new UploadThread(mainwindow,data_sock,filename,offset);
     uploadthread->start();

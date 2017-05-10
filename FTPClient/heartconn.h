@@ -22,7 +22,7 @@ private:
     int port;
 
 public:
-    HeartConn(MainWindow *mainwindow,FTPManager *ftpmanager,SOCKET control_sock,string host,string username,string password,int port);
+    HeartConn(MainWindow *mainwindow,FTPManager *ftpmanager,string host,string username,string password,int port);
     ~HeartConn();
 
     void run();

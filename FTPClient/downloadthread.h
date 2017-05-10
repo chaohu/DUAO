@@ -13,7 +13,8 @@ class DownloadThread : public QThread
     Q_OBJECT
 
 signals:
-    void filedownload(bool check);
+    void check_file(bool check);
+    void filedownload(QString filename);
 
 private:
     MainWindow *mainwindow;

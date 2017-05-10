@@ -1,18 +1,20 @@
 #include "uploadthread.h"
 #include "duprogressbar.h"
+#include "ftpmanager.h"
 #include <QSemaphore>
 
 extern QList<unsigned> size_now_no;
 extern QMutex mutex_process;
 
 extern QSemaphore bar_list_queen;
+extern FTPManager *ftpmanager;
 
 UploadThread::UploadThread(MainWindow *mainwindow, SOCKET data_sock, QString filename, long long offset) {
     UploadThread::mainwindow = mainwindow;
     UploadThread::data_sock = data_sock;
     UploadThread::filename = filename;
     UploadThread::offset = offset;
-    connect(this,SIGNAL(fileupload()),mainwindow,SLOT(f_ch_server_dir()));
+    connect(this,SIGNAL(fileupload(QString)),mainwindow,SLOT(file_uploaded(QString)));
     connect(this,SIGNAL(finished()),this,SLOT(deleteLater()));
 }
 
@@ -37,7 +39,7 @@ void UploadThread::run() {
         size_now_no.push_back(0);
         locate = size_now_no.size();
         mutex_process.unlock();
-        DUProgressBar *duprogressbar = new DUProgressBar(mainwindow,file.size(),locate-1);
+        DUProgressBar *duprogressbar = new DUProgressBar(mainwindow,filename,file.size(),locate-1);
         duprogressbar->start();
         while((size = file.read(send_content,512)) > 0) {
             aaa = send(data_sock,send_content,size,0);
@@ -50,7 +52,10 @@ void UploadThread::run() {
         }
         file.close();
         closesocket(data_sock);
-        emit fileupload();
+        recv(ftpmanager->getcontrolsock(),send_content,195,0);
+        mainwindow->add_log(send_content);
+        memset(send_content,0,sizeof(send_content));
+        emit fileupload(filename);
         bar_list_queen.release();
     }
 }

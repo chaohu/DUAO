@@ -157,7 +157,7 @@ int MainWindow::loginserver() {
     else {
         if(username.empty()) username.append("anonymous");
         if(ftpmanager->loginserver(host,username,password,port.toInt())) {
-            HeartConn *heartconn = new HeartConn(this,ftpmanager,ftpmanager->getcontrolsock(),host,username,password,port.toInt());
+            HeartConn *heartconn = new HeartConn(this,ftpmanager,host,username,password,port.toInt());
             heartconn->start();
             ftpmanager->setmode(0);
             if(ftpmanager->get_dir_list()) {
@@ -220,9 +220,15 @@ void MainWindow::showprogressbar() {
     progressbar_list->setVisible(true);
 }
 
+void MainWindow::f_ch_local_dir() {
+    QDir::setCurrent(local_path->text());
+    flash_local_dir_list();
+    qDebug("改变本地目录");
+}
+
 void MainWindow::f_ch_local_dir(QString dir_path) {
     QDir::setCurrent(dir_path);
-    flash_local_dir_list(true);
+    flash_local_dir_list();
     qDebug("改变本地目录");
 }
 
@@ -316,19 +322,18 @@ void MainWindow::localitemClicked(QModelIndex index) {
     qDebug()<<index.data().toString();
     char type = index.data().toString().toStdString().data()[0];
     if(type == 'd') {
-
+        f_ch_local_dir(index.data().toString().mid(3));
     }
     else if(type == 'f') {
-        int flag = 0;
-        if(ftpmanager->getmode()) flag = ftpmanager->file_upload_act(index.data().toString().mid(3));
-        else flag = ftpmanager->file_upload_pas(index.data().toString().mid(3));
-        if(flag) {
-            if(ftpmanager->get_dir_list()) {
-                if(analysis_server_dir(ftpmanager->server_dir_list_info)) {
+        if(ftpmanager->getmode()) ftpmanager->file_upload_act(index.data().toString().mid(3));
+        else ftpmanager->file_upload_pas(index.data().toString().mid(3));
+//        if(flag) {
+//            if(ftpmanager->get_dir_list()) {
+//                if(analysis_server_dir(ftpmanager->server_dir_list_info)) {
 
-                }
-            }
-        }
+//                }
+//            }
+//        }
     }
 }
 
@@ -353,14 +358,27 @@ void MainWindow::serveritemClicked(QModelIndex index) {
 }
 
 
-void MainWindow::flash_local_dir_list(bool check) {
+void MainWindow::check_file(bool check) {
     if(check) {
         QMessageBox::warning(this,tr("提示"),tr("下载文件校验正确！"),QMessageBox::Yes);
     }
     else {
         QMessageBox::warning(this,tr("提示！"),tr("下载文件校验失败！"),QMessageBox::Yes);
     }
+}
 
+void MainWindow::file_uploaded(QString filename) {
+    QMessageBox::warning(this,tr("提示"),filename+"文件上传完成！",QMessageBox::Yes);
+    flash_server_dir_list();
+}
+
+void MainWindow::file_downloaded(QString filename) {
+    QMessageBox::warning(this,tr("提示"),filename+"文件下载完成！",QMessageBox::Yes);
+    flash_local_dir_list();
+}
+
+
+void MainWindow::flash_local_dir_list() {
     localstandardItemModel->clear();
     QDir dir(QDir::currentPath());
     dir.setFilter(QDir::AllEntries|QDir::NoDot);
@@ -408,29 +426,34 @@ void MainWindow::flash_server_dir_list() {
 
 
 //添加上传下载进度条
-void MainWindow::add_progressbar(int num) {
+void MainWindow::add_progressbar(int num ,QString filename) {
     qDebug()<<(new QString("progressbar"));
-    QProgressBar *_progressbar = new QProgressBar();
-    _progressbar->setRange(0,100);
-    _progressbar->setValue(1);
+    du_progressbar *_du_progressbar = new du_progressbar();
+    _du_progressbar->filename = new QLabel(filename);
+    _du_progressbar->progressbar = new QProgressBar();
+    _du_progressbar->progressbar->setRange(0,100);
+    _du_progressbar->progressbar->setValue(1);
     while(progressbar.size()<(unsigned)num+1) progressbar.push_back(NULL);
-    progressbar[num] = _progressbar;
-    progressbar_layout->addWidget(_progressbar);
+    progressbar[num] = _du_progressbar;
+    progressbar_layout->addWidget(_du_progressbar->filename);
+    progressbar_layout->addWidget(_du_progressbar->progressbar);
 }
 
 
 //刷新上传下载进度条
 void MainWindow::flash_bar(int num, unsigned value) {
     qDebug("flash");
-    progressbar[num]->setValue(value);
+    progressbar[num]->progressbar->setValue(value);
 }
 
 
 //清空下载上传进度条
 void MainWindow::clear_downup_list() {
     for(int i = 0;i < (int)progressbar.size();i++) {
-        progressbar_layout->removeWidget(progressbar[i]);
-        delete(progressbar[i]);
+        progressbar_layout->removeWidget(progressbar[i]->filename);
+        progressbar_layout->removeWidget(progressbar[i]->progressbar);
+        delete(progressbar[i]->filename);
+        delete(progressbar[i]->progressbar);
     }
     progressbar.clear();
     mutex_process.lock();
@@ -478,10 +501,10 @@ void MainWindow::dropEvent(QDropEvent *event) {
 
 
 //断开重连代码
-HeartConn::HeartConn(MainWindow *mainwindow,FTPManager *ftpmanager,SOCKET control_sock, string host, string username, string password, int port) {
+HeartConn::HeartConn(MainWindow *mainwindow,FTPManager *ftpmanager, string host, string username, string password, int port) {
     HeartConn::mainwindow = mainwindow;
     HeartConn::ftpmanager = ftpmanager;
-    HeartConn::control_sock = control_sock;
+    HeartConn::control_sock = ftpmanager->getcontrolsock();
     HeartConn::host = host;
     HeartConn::username = username;
     HeartConn::password = password;
@@ -494,6 +517,8 @@ HeartConn::~HeartConn() {
 }
 
 void HeartConn::run() {
+    int conn_state = 0;
+    char sendBuf[20] = "\r\n";
     char temp[200];
     bool exit = false;
     while(true) {
@@ -502,11 +527,19 @@ void HeartConn::run() {
         mutex_exit.unlock();
         if(exit) break;
         else {
-            send(control_sock,"Type I\r\n",15,0);
-            if(recv(control_sock,temp,20,0) <= 0) {
-                if(ftpmanager->loginserver(host,username,password,port)) emit flash_server_dir();
+            conn_state = send(control_sock,sendBuf,strlen(sendBuf),0);
+            itoa(conn_state,temp,10);
+            qDebug(temp);
+            if(conn_state == -1) {
+                if(ftpmanager->loginserver(host,username,password,port)) {
+                    control_sock = ftpmanager->getcontrolsock();
+                    emit flash_server_dir();
+                }
             }
         }
-        msleep(500);
+        msleep(2000);
     }
+    mutex_exit.lock();
+    conn_exit = false;
+    mutex_exit.unlock();
 }

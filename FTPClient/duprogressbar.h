@@ -14,16 +14,17 @@ class DUProgressBar: public QThread
     Q_OBJECT
 
 signals:
-    void add_bar(int num);
+    void add_bar(int num,QString filename);
     void flash_bar(int num,unsigned value);
 
 private:
     MainWindow *mainwindow;
+    QString filename;
     unsigned size_all;
     int locate;
 
 public:
-    DUProgressBar(MainWindow *mainwindow,unsigned size_all,int locate);
+    DUProgressBar(MainWindow *mainwindow,QString filename,unsigned size_all,int locate);
     ~DUProgressBar();
 
     void run();

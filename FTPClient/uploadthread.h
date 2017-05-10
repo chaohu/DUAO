@@ -11,7 +11,7 @@ class UploadThread : public QThread
     Q_OBJECT
 
 signals:
-    void fileupload();
+    void fileupload(QString filename);
 
 private:
     MainWindow *mainwindow;
